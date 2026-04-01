@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ひとりめし">
+  <title>ひとりめし</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --accent:#FF6B35; --bg:#0F0E0C; --surface:#1A1916; --card:#232220;
+      --text:#F5F0E8; --muted:#6B6760; --green:#4CAF7D; --yellow:#FFB830;
+      --red:#FF5555; --blue:#4A9EFF;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;min-height:-webkit-fill-available;}
+    body::after{content:'';position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(255,107,53,0.07) 0%,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:0;}
+    input{-webkit-appearance:none;font-family:inherit;}
+    button{font-family:inherit;cursor:pointer;}
+    ::placeholder{color:#3A3835;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    @keyframes shake{0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-8px);}40%,80%{transform:translateX(8px);}}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+
+    /* ===== LOGIN ===== */
+    #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:40px 24px;position:relative;z-index:1;}
+    .login-box{width:100%;max-width:360px;animation:fadeUp 0.5s ease;}
+    .login-logo{text-align:center;margin-bottom:48px;}
+    .login-logo .icon{font-size:44px;display:block;margin-bottom:12px;}
+    .login-logo h1{font-size:34px;font-weight:800;letter-spacing:-1.5px;}
+    .login-logo h1 span{color:var(--accent);}
+    .login-logo p{font-size:11px;color:var(--muted);margin-top:8px;letter-spacing:2px;text-transform:uppercase;}
+    .form-group{margin-bottom:14px;}
+    .form-group label{display:block;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:7px;}
+    .form-group input{width:100%;background:var(--surface);border:1px solid #2E2D2B;border-radius:12px;padding:14px 16px;color:var(--text);font-size:16px;outline:none;transition:border-color 0.2s;}
+    .form-group input:focus{border-color:var(--accent);}
+    .btn-login{width:100%;padding:16px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;letter-spacing:0.5px;margin-top:24px;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 0.2s;}
+    .btn-login:disabled{background:#2A2927;color:var(--muted);}
+    .btn-login:active:not(:disabled){opacity:0.85;}
+    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;}
+    .login-error{background:rgba(255,85,85,0.1);border:1px solid rgba(255,85,85,0.3);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--red);font-family:'Noto Sans JP',sans-serif;margin-top:14px;line-height:1.5;display:none;animation:shake 0.4s ease;}
+    .login-error.show{display:block;}
+
+    /* ===== APP ===== */
+    #app-screen{display:none;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px;position:relative;z-index:1;}
+    #app-screen.visible{display:block;animation:fadeUp 0.4s ease;}
+
+    .app-header{padding:18px 20px 14px;border-bottom:1px solid #2A2927;display:flex;justify-content:space-between;align-items:center;position:relative;}
+    .app-logo{display:flex;align-items:baseline;gap:6px;}
+    .app-logo .a{font-size:22px;font-weight:800;letter-spacing:-1px;color:var(--accent);}
+    .app-logo .b{font-size:22px;font-weight:800;letter-spacing:-1px;}
+    .header-right{display:flex;gap:8px;align-items:center;}
+
+    .btn-apikey{background:#1a2a1a;border:1px solid #2a4a2a;border-radius:8px;padding:5px 10px;font-size:10px;color:var(--green);}
+    .btn-apikey.empty{background:#2a1a1a;border-color:#4a2a2a;color:var(--red);}
+    .btn-hamburger{background:none;border:none;padding:4px;display:flex;flex-direction:column;gap:4px;align-items:center;}
+    .hb-line{display:block;width:20px;height:2px;background:var(--text);border-radius:2px;transition:all 0.2s;}
+
+    .dropdown-menu{position:absolute;top:100%;right:16px;z-index:100;background:var(--card);border:1px solid #3A3835;border-radius:12px;padding:8px;min-width:160px;animation:slideDown 0.2s ease;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+    .dropdown-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:none;border:none;font-size:13px;font-family:'Noto Sans JP',sans-serif;border-radius:8px;text-align:left;color:var(--text);}
+    .dropdown-item.danger{color:var(--red);}
+    .overlay{position:fixed;inset:0;z-index:50;}
+
+    .api-input-bar{padding:12px 20px;background:var(--surface);border-bottom:1px solid #2A2927;}
+    .api-input-bar p{font-size:11px;color:var(--muted);margin-bottom:6px;}
+    .api-input-row{display:flex;gap:8px;}
+    .api-input-row input{flex:1;background:var(--card);border:1px solid #3A3835;border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;outline:none;font-family:monospace;}
+    .btn-save{background:var(--accent);border:none;border-radius:8px;padding:0 16px;color:#fff;font-size:13px;font-weight:700;white-space:nowrap;}
+
+    .tabs{display:flex;padding:10px 20px 0;gap:4px;}
+    .tab-btn{flex:1;padding:9px;background:transparent;border:none;border-radius:10px;font-size:13px;font-weight:700;color:var(--muted);transition:all 0.2s;}
+    .tab-btn.active{background:var(--accent);color:#fff;}
+
+    .tab-content{padding:18px 20px 0;animation:fadeUp 0.3s ease;}
+
+    /* Fridge */
+    .scan-btn{width:100%;padding:14px;background:var(--surface);border:1px dashed #3A3835;border-radius:12px;font-size:14px;font-weight:600;color:var(--text);display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color 0.2s;}
+    .scan-btn.scanning{border-color:var(--accent);background:#1A1916;}
+    .scan-btn:disabled{cursor:not-allowed;}
+    .progress-box{margin-top:10px;background:var(--surface);border-radius:10px;padding:12px 14px;border:1px solid #2A2927;}
+    .progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+    .progress-label{font-size:12px;color:var(--text);font-family:'Noto Sans JP',sans-serif;}
+    .progress-pct{font-size:12px;font-weight:700;color:var(--accent);}
+    .progress-bar-bg{height:5px;background:var(--card);border-radius:3px;overflow:hidden;}
+    .progress-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--yellow));border-radius:3px;transition:width 0.7s ease;}
+    .progress-steps{display:flex;justify-content:space-around;margin-top:10px;}
+    .progress-step{text-align:center;}
+    .step-dot{width:18px;height:18px;border-radius:50%;background:var(--card);border:2px solid #3A3835;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;transition:all 0.4s;font-size:10px;color:#fff;}
+    .step-dot.done{background:var(--accent);border-color:var(--accent);}
+    .step-label{font-size:9px;color:var(--muted);}
+    .step-label.done{color:var(--accent);}
+    .scan-error{color:var(--red);font-size:12px;margin-top:6px;line-height:1.5;}
+
+    .scan-confirm{background:var(--surface);border-radius:14px;padding:16px;border:1px solid var(--accent);margin-bottom:14px;animation:fadeUp 0.3s ease;}
+    .scan-confirm-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+    .scan-store{font-size:14px;font-weight:700;}
+    .scan-date{font-size:11px;color:var(--muted);margin-top:2px;}
+    .scan-badge{font-size:11px;color:var(--accent);background:rgba(255,107,53,0.13);padding:4px 10px;border-radius:20px;}
+    .confirm-hint{font-size:11px;color:var(--muted);margin-bottom:10px;}
+    .confirm-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #2A2927;cursor:pointer;}
+    .confirm-check{width:18px;height:18px;border-radius:5px;border:2px solid #3A3835;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;font-size:10px;color:#fff;}
+    .confirm-check.checked{background:var(--accent);border-color:var(--accent);}
+    .confirm-name{flex:1;font-size:13px;font-family:'Noto Sans JP',sans-serif;color:var(--muted);}
+    .confirm-name.checked{color:var(--text);}
+    .confirm-price{font-size:11px;color:var(--muted);}
+    .confirm-btns{display:flex;gap:8px;margin-top:14px;}
+    .btn-cancel{flex:1;padding:10px;background:transparent;border:1px solid #3A3835;border-radius:9px;font-size:13px;color:var(--muted);}
+    .btn-add{flex:2;padding:10px;background:var(--accent);border:none;border-radius:9px;font-size:13px;font-weight:700;color:#fff;}
+    .btn-add:disabled{background:#2A2927;color:var(--muted);}
+
+    .btn-manual-toggle{width:100%;padding:10px;background:transparent;border:1px solid #2E2D2B;border-radius:10px;font-size:13px;color:var(--muted);margin-bottom:12px;}
+    .manual-box{background:var(--surface);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid #2E2D2B;}
+    .manual-box input{width:100%;background:var(--card);border:1px solid #3A3835;border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;outline:none;font-family:'Noto Sans JP',sans-serif;margin-bottom:8px;}
+    .manual-row{display:flex;gap:8px;align-items:center;}
+    .manual-row label{font-size:12px;color:var(--muted);white-space:nowrap;}
+    .manual-row input[type=date]{flex:1;background:var(--card);border:1px solid #3A3835;border-radius:8px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;}
+    input[type=date]::-webkit-calendar-picker-indicator{filter:invert(0.5);}
+    .btn-add-item{background:var(--accent);border:none;border-radius:8px;padding:9px 16px;color:#fff;font-size:13px;font-weight:700;white-space:nowrap;}
+
+    .fridge-empty{text-align:center;padding:40px 0;opacity:0.4;}
+    .fridge-empty .ei{font-size:40px;margin-bottom:12px;}
+    .fridge-empty p{color:var(--muted);font-size:14px;font-family:'Noto Sans JP',sans-serif;}
+    .fridge-count{font-size:11px;color:var(--muted);margin-bottom:10px;letter-spacing:1px;}
+    .fridge-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border-radius:12px;margin-bottom:8px;border:1px solid #2A2927;}
+    .fridge-item-name{font-size:15px;font-family:'Noto Sans JP',sans-serif;font-weight:500;}
+    .fridge-item-date{font-size:11px;color:var(--muted);margin-top:2px;}
+    .expiry-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;}
+    .btn-remove{background:none;border:none;color:var(--muted);font-size:18px;padding:0 2px;line-height:1;}
+
+    /* Recipe */
+    .settings-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+    .settings-badge{font-size:11px;color:var(--blue);background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.2);padding:4px 10px;border-radius:20px;cursor:pointer;}
+    .recipe-empty{text-align:center;padding:40px 0;opacity:0.4;}
+    .recipe-empty .ei{font-size:40px;margin-bottom:12px;}
+    .ingredient-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+    .ingredient-label{font-size:12px;color:var(--muted);letter-spacing:1px;}
+    .btn-auto{background:transparent;border:1px solid #3A3835;border-radius:8px;padding:5px 12px;color:var(--yellow);font-size:12px;}
+    .ingredient-item{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--surface);border-radius:12px;margin-bottom:8px;border:1px solid #2A2927;cursor:pointer;transition:all 0.15s;}
+    .ingredient-item.selected{background:var(--card);border-color:var(--accent);}
+    .ing-check{width:20px;height:20px;border-radius:6px;border:2px solid #3A3835;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;font-size:12px;color:#fff;}
+    .ing-check.checked{background:var(--accent);border-color:var(--accent);}
+    .ing-name{flex:1;font-size:14px;font-family:'Noto Sans JP',sans-serif;}
+    .btn-generate{width:100%;padding:15px;margin-top:8px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .btn-generate:disabled{background:#2A2927;color:var(--muted);}
+    .recipe-error{color:var(--red);font-size:12px;margin-top:8px;line-height:1.5;}
+
+    .recipe-card{margin-top:20px;animation:fadeUp 0.4s ease;}
+    .recipe-header{background:var(--surface);border-radius:16px;padding:18px;border:1px solid #2E2D2B;margin-bottom:8px;}
+    .recipe-emoji{font-size:32px;margin-bottom:6px;}
+    .recipe-name{font-size:20px;font-weight:800;letter-spacing:-0.5px;}
+    .recipe-desc{font-size:13px;color:var(--muted);margin-top:4px;font-family:'Noto Sans JP',sans-serif;}
+    .recipe-dishes{font-size:11px;color:var(--muted);margin-top:5px;font-family:'Noto Sans JP',sans-serif;}
+    .recipe-stats{display:flex;gap:8px;margin-top:12px;}
+    .recipe-stat{flex:1;background:var(--card);border-radius:10px;padding:9px 6px;text-align:center;}
+    .recipe-stat .si{font-size:14px;}
+    .recipe-stat .sv{font-size:11px;color:var(--text);font-weight:600;margin-top:2px;}
+
+    .sub-tabs{display:flex;gap:2px;margin-bottom:10px;background:var(--surface);border-radius:12px;padding:4px;}
+    .sub-tab{flex:1;padding:8px 4px;background:transparent;border:none;border-radius:9px;font-size:13px;color:var(--muted);transition:all 0.2s;}
+    .sub-tab.active{background:var(--card);color:var(--text);font-weight:700;}
+    .sub-content{background:var(--surface);border-radius:16px;padding:18px;border:1px solid #2E2D2B;}
+
+    .step-row{display:flex;gap:12px;margin-bottom:14px;}
+    .step-num{width:24px;height:24px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:var(--muted);}
+    .step-num.first{background:var(--accent);color:#fff;}
+    .step-text{font-size:14px;line-height:1.7;color:var(--text);font-family:'Noto Sans JP',sans-serif;padding-top:2px;}
+    .tip-box{margin-top:12px;background:var(--card);border-radius:10px;padding:11px 13px;border-left:3px solid var(--green);display:flex;gap:10px;}
+    .tip-text{font-size:13px;color:var(--text);font-family:'Noto Sans JP',sans-serif;line-height:1.6;}
+
+    .nutr-row{margin-bottom:12px;}
+    .nutr-header{display:flex;justify-content:space-between;margin-bottom:4px;}
+    .nutr-label{font-size:12px;color:var(--muted);}
+    .nutr-val{font-size:12px;color:var(--text);}
+    .nutr-bar-bg{height:4px;background:#2A2927;border-radius:2px;overflow:hidden;}
+    .nutr-bar-fill{height:100%;border-radius:2px;transition:width 0.8s;}
+    .nutr-note{font-size:11px;color:var(--muted);margin-top:12px;text-align:center;font-family:'Noto Sans JP',sans-serif;}
+
+    .shop-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #2A2927;cursor:pointer;}
+    .shop-check{width:20px;height:20px;border-radius:6px;border:2px solid #3A3835;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;font-size:11px;color:#fff;}
+    .shop-check.checked{background:var(--green);border-color:var(--green);}
+    .shop-name{font-size:14px;font-family:'Noto Sans JP',sans-serif;color:var(--text);}
+    .shop-name.checked{text-decoration:line-through;color:var(--muted);}
+    .shop-empty{text-align:center;padding:16px 0;}
+    .shop-empty .se{font-size:22px;margin-bottom:6px;}
+
+    /* Settings Modal */
+    .modal-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;}
+    .settings-sheet{background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;border:1px solid #2A2927;animation:fadeUp 0.25s ease;}
+    .settings-title-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+    .settings-title{font-size:15px;font-weight:700;}
+    .btn-close{background:none;border:none;color:var(--muted);font-size:22px;line-height:1;}
+    .range-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+    .range-label{font-size:13px;color:var(--text);font-family:'Noto Sans JP',sans-serif;}
+    .range-val{font-size:18px;font-weight:800;color:var(--accent);}
+    .range-val span{font-size:12px;color:var(--muted);font-weight:400;}
+    input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:#2A2927;outline:none;margin-bottom:4px;}
+    input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;}
+    .range-minmax{display:flex;justify-content:space-between;}
+    .range-minmax span{font-size:10px;color:var(--muted);}
+    .seg-group{margin-bottom:20px;}
+    .seg-label{font-size:12px;color:var(--muted);margin-bottom:8px;}
+    .seg-btns{display:flex;gap:4px;background:var(--card);border-radius:10px;padding:4px;}
+    .seg-btn{flex:1;padding:8px 4px;background:transparent;border:1px solid transparent;border-radius:7px;font-size:12px;color:var(--muted);transition:all 0.15s;}
+    .seg-btn.active{background:var(--surface);border-color:#3A3835;color:var(--text);font-weight:700;}
+    .btn-reset{width:100%;margin-top:4px;padding:11px;background:transparent;border:1px solid #3A3835;border-radius:10px;font-size:13px;color:var(--muted);}
+
+    /* Reset Modal */
+    .reset-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:24px;}
+    .reset-box{background:var(--card);border-radius:16px;padding:24px;border:1px solid #3A3835;width:100%;max-width:320px;animation:fadeUp 0.2s ease;}
+    .reset-title{font-size:16px;font-weight:700;margin-bottom:8px;}
+    .reset-desc{font-size:14px;color:var(--muted);font-family:'Noto Sans JP',sans-serif;line-height:1.7;margin-bottom:20px;}
+    .reset-btns{display:flex;gap:8px;}
+    .btn-reset-cancel{flex:1;padding:12px;background:var(--surface);border:1px solid #3A3835;border-radius:10px;font-size:14px;font-weight:600;color:var(--text);}
+    .btn-reset-confirm{flex:1;padding:12px;background:var(--red);border:none;border-radius:10px;font-size:14px;font-weight:700;color:#fff;}
+  </style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="icon">🍳</span>
+      <h1><span>ひとり</span>めし</h1>
+      <p>1人分レシピ &amp; 冷蔵庫管理</p>
+    </div>
+    <div class="form-group">
+      <label>メールアドレス</label>
+      <input type="email" id="inp-email" placeholder="example@mail.com" autocomplete="email" inputmode="email">
+    </div>
+    <div class="form-group">
+      <label>パスワード</label>
+      <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" id="btn-login" onclick="doLogin()">ログイン</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- APP SCREEN -->
+<div id="app-screen">
+  <!-- Header -->
+  <div class="app-header">
+    <div class="app-logo"><span class="a">ひとり</span><span class="b">めし</span></div>
+    <div class="header-right">
+      <button id="btn-apikey" class="btn-apikey empty" onclick="toggleApiInput()">🔑 APIキー</button>
+      <button class="btn-hamburger" id="btn-hb" onclick="toggleMenu()">
+        <span class="hb-line" id="hb1"></span>
+        <span class="hb-line" id="hb2"></span>
+        <span class="hb-line" id="hb3"></span>
+      </button>
+    </div>
+    <div class="dropdown-menu" id="dropdown-menu" style="display:none">
+      <button class="dropdown-item" onclick="openSettings()">⚙️ 設定</button>
+      <button class="dropdown-item" onclick="doLogout()">🚪 ログアウト</button>
+      <button class="dropdown-item danger" onclick="confirmReset()">🗑 冷蔵庫をリセット</button>
+    </div>
+  </div>
+  <div class="overlay" id="menu-overlay" style="display:none" onclick="closeMenu()"></div>
+
+  <!-- API Key bar -->
+  <div class="api-input-bar" id="api-input-bar" style="display:none">
+    <p>Anthropic APIキー（Proプランは不要。Freeプランは自前キーを入力）</p>
+    <div class="api-input-row">
+      <input type="password" id="inp-apikey" placeholder="sk-ant-...">
+      <button class="btn-save" onclick="saveApiKey()">保存</button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-fridge" onclick="switchTab('fridge')">冷蔵庫</button>
+    <button class="tab-btn" id="tab-recipe" onclick="switchTab('recipe')">レシピ</button>
+  </div>
+
+  <!-- FRIDGE TAB -->
+  <div class="tab-content" id="content-fridge">
+    <div style="margin-bottom:14px">
+      <button class="scan-btn" id="scan-btn" onclick="triggerScan()">
+        <span style="font-size:20px">📷</span>レシートをスキャンして食材を自動登録
+      </button>
+      <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none" onchange="onFileSelected(event)">
+      <div class="progress-box" id="progress-box" style="display:none">
+        <div class="progress-header">
+          <span class="progress-label" id="progress-label"></span>
+          <span class="progress-pct" id="progress-pct">0%</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+        <div class="progress-steps">
+          <div class="progress-step"><div class="step-dot" id="sd0"></div><span class="step-label" id="sl0">画像読込</span></div>
+          <div class="progress-step"><div class="step-dot" id="sd1"></div><span class="step-label" id="sl1">店名・日付</span></div>
+          <div class="progress-step"><div class="step-dot" id="sd2"></div><span class="step-label" id="sl2">商品一覧</span></div>
+          <div class="progress-step"><div class="step-dot" id="sd3"></div><span class="step-label" id="sl3">金額確認</span></div>
+          <div class="progress-step"><div class="step-dot" id="sd4"></div><span class="step-label" id="sl4">完了</span></div>
+        </div>
+      </div>
+      <div class="scan-error" id="scan-error" style="display:none"></div>
+    </div>
+    <div id="scan-confirm-area"></div>
+    <button class="btn-manual-toggle" id="btn-manual-toggle" onclick="toggleManual()">+ 手動で食材を追加</button>
+    <div class="manual-box" id="manual-box" style="display:none">
+      <input type="text" id="inp-manual-name" placeholder="食材名（例: 卵）" onkeydown="if(event.key==='Enter')addManual()">
+      <div class="manual-row">
+        <label>購入日</label>
+        <input type="date" id="inp-manual-date">
+        <button class="btn-add-item" onclick="addManual()">追加</button>
+      </div>
+    </div>
+    <div id="fridge-list"></div>
+  </div>
+
+  <!-- RECIPE TAB -->
+  <div class="tab-content" id="content-recipe" style="display:none">
+    <div class="settings-badges" id="settings-badges" onclick="openSettings()"></div>
+    <div id="ingredient-selector"></div>
+    <button class="btn-generate" id="btn-generate" onclick="generateRecipe()" disabled>🍳 食材を選んでください</button>
+    <div class="recipe-error" id="recipe-error" style="display:none"></div>
+    <div id="recipe-result"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-sheet">
+    <div class="settings-title-row">
+      <span class="settings-title">レシピ設定</span>
+      <button class="btn-close" onclick="closeSettings()">×</button>
+    </div>
+    <div style="margin-bottom:24px">
+      <div class="range-row">
+        <span class="range-label">⏱ 最大調理時間</span>
+        <span class="range-val" id="range-display">30<span>分</span></span>
+      </div>
+      <input type="range" id="range-time" min="5" max="60" step="5" value="30" oninput="document.getElementById('range-display').innerHTML=this.value+'<span>分</span>';settings.maxTime=+this.value;saveSettings();">
+      <div class="range-minmax"><span>5分</span><span>60分</span></div>
+    </div>
+    <div class="seg-group">
+      <div class="seg-label">🍚 ご飯の量</div>
+      <div class="seg-btns" id="seg-rice"></div>
+    </div>
+    <div class="seg-group">
+      <div class="seg-label">🍽 洗い物の量</div>
+      <div class="seg-btns" id="seg-dish"></div>
+    </div>
+    <div class="seg-group">
+      <div class="seg-label">🧂 味の濃さ</div>
+      <div class="seg-btns" id="seg-spice"></div>
+    </div>
+    <div class="seg-group">
+      <div class="seg-label">🔥 調理スタイル</div>
+      <div class="seg-btns" id="seg-style"></div>
+    </div>
+    <button class="btn-reset" onclick="resetSettings()">デフォルトに戻す</button>
+  </div>
+</div>
+
+<!-- RESET CONFIRM -->
+<div class="reset-overlay" id="reset-modal" style="display:none">
+  <div class="reset-box">
+    <p class="reset-title">冷蔵庫をリセット</p>
+    <p class="reset-desc">登録されている食材をすべて削除します。この操作は元に戻せません。</p>
+    <div class="reset-btns">
+      <button class="btn-reset-cancel" onclick="document.getElementById('reset-modal').style.display='none'">キャンセル</button>
+      <button class="btn-reset-confirm" onclick="doReset()">削除する</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD09A_IUArbdXZO6F9DutJigFOi9hpxBa0",
+  authDomain: "hitorimeshi-a.firebaseapp.com",
+  projectId: "hitorimeshi-a",
+  storageBucket: "hitorimeshi-a.firebasestorage.app",
+  messagingSenderId: "289020471546",
+  appId: "1:289020471546:web:320a8bfe43ba42a1738143"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, user => {
+  if (user) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-screen').classList.add('visible');
+    initApp();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app-screen').classList.remove('visible');
+  }
+});
+
+window.doLogin = async function() {
+  const email = document.getElementById('inp-email').value.trim();
+  const pass = document.getElementById('inp-pass').value;
+  const btn = document.getElementById('btn-login');
+  const err = document.getElementById('login-error');
+  if (!email || !pass) { showLoginError('メールアドレスとパスワードを入力してください'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>ログイン中…';
+  err.classList.remove('show');
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'ログイン';
+    const msgs = {
+      'auth/invalid-credential':'メールアドレスまたはパスワードが間違っています',
+      'auth/invalid-email':'メールアドレスの形式が正しくありません',
+      'auth/too-many-requests':'試行回数が多すぎます。しばらく待ってください',
+      'auth/network-request-failed':'ネットワークエラーです'
+    };
+    showLoginError(msgs[e.code] || 'ログインに失敗しました（'+e.code+'）');
+  }
+};
+
+window.doLogout = async function() {
+  closeMenu();
+  await signOut(auth);
+};
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.classList.remove('show');
+  void el.offsetWidth; el.classList.add('show');
+}
+
+document.getElementById('inp-pass').addEventListener('keydown', e => { if(e.key==='Enter') window.doLogin(); });
+document.getElementById('inp-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('inp-pass').focus(); });
+</script>
+
+<script>
+// ===== STATE =====
+const EXPIRY_MAP = {
+  '鶏肉':3,'豚肉':3,'牛肉':3,'ひき肉':2,'魚':2,'刺身':1,'サーモン':2,'マグロ':2,
+  'ベーコン':7,'ハム':7,'ウインナー':7,'ソーセージ':7,
+  '牛乳':7,'豆腐':4,'卵':21,'チーズ':14,'バター':30,'ヨーグルト':14,'生クリーム':7,
+  'レタス':5,'キャベツ':14,'ほうれん草':4,'小松菜':4,'ねぎ':7,'長ねぎ':7,
+  '玉ねぎ':30,'にんじん':21,'じゃがいも':30,'トマト':5,'きゅうり':5,
+  'なす':5,'ピーマン':7,'ブロッコリー':5,'もやし':3,'白菜':14,
+  'しめじ':5,'えのき':5,'しいたけ':5,'まいたけ':5,
+  '納豆':7,'こんにゃく':7,'油揚げ':5,'厚揚げ':4,'絹豆腐':4,'木綿豆腐':4
+};
+const DEFAULT_SETTINGS = {maxTime:30,dishCount:'少なめ',spiceLevel:'普通',cookStyle:'何でも',riceSize:'普通'};
+
+let fridge = [];
+let apiKey = '';
+let settings = {...DEFAULT_SETTINGS};
+let selectedIds = new Set();
+let currentRecipe = null;
+let shoppingChecked = new Set();
+let activeRecipeTab = '作り方';
+let scanResultData = null;
+let scanConfirmSelected = new Set();
+let menuOpen = false;
+let manualOpen = false;
+let apiInputOpen = false;
+
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function load(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+
+function predictExpiry(name, pd) {
+  const d = new Date(pd); let days = 7;
+  for(const [k,v] of Object.entries(EXPIRY_MAP)){if(name.includes(k)){days=v;break;}}
+  d.setDate(d.getDate()+days);
+  return d.toISOString().split('T')[0];
+}
+function daysUntil(exp){
+  const now=new Date();now.setHours(0,0,0,0);
+  return Math.ceil((new Date(exp)-now)/86400000);
+}
+function expiryColor(d){return d<=1?'#FF5555':d<=3?'#FFB830':'#4CAF7D';}
+function expiryLabel(d){return d<0?'期限切れ':d===0?'今日まで':d+'日後';}
+function extractJSON(text){
+  try{return JSON.parse(text.trim());}catch(e){}
+  const s=text.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+  try{return JSON.parse(s);}catch(e){}
+  const a=text.indexOf('{'),b=text.lastIndexOf('}');
+  if(a>=0&&b>=0){try{return JSON.parse(text.slice(a,b+1));}catch(e){}}
+  return null;
+}
+
+function initApp(){
+  fridge = load('fridge',[]);
+  apiKey = load('apiKey','');
+  settings = {...DEFAULT_SETTINGS,...load('settings',{})};
+  document.getElementById('inp-manual-date').value = new Date().toISOString().split('T')[0];
+  updateApiKeyBtn();
+  renderFridge();
+  renderIngredients();
+  renderSettingsBadges();
+  initSettingsUI();
+}
+
+// ===== HEADER =====
+function toggleMenu(){
+  menuOpen=!menuOpen;
+  document.getElementById('dropdown-menu').style.display=menuOpen?'block':'none';
+  document.getElementById('menu-overlay').style.display=menuOpen?'block':'none';
+  const hb1=document.getElementById('hb1'),hb2=document.getElementById('hb2'),hb3=document.getElementById('hb3');
+  hb1.style.transform=menuOpen?'rotate(45deg) translate(4px,4px)':'none';
+  hb2.style.opacity=menuOpen?0:1;
+  hb3.style.transform=menuOpen?'rotate(-45deg) translate(4px,-4px)':'none';
+}
+function closeMenu(){menuOpen=false;document.getElementById('dropdown-menu').style.display='none';document.getElementById('menu-overlay').style.display='none';document.getElementById('hb1').style.transform='none';document.getElementById('hb2').style.opacity=1;document.getElementById('hb3').style.transform='none';}
+function toggleApiInput(){apiInputOpen=!apiInputOpen;document.getElementById('api-input-bar').style.display=apiInputOpen?'block':'none';if(apiInputOpen)document.getElementById('inp-apikey').value=apiKey;}
+function saveApiKey(){apiKey=document.getElementById('inp-apikey').value.trim();save('apiKey',apiKey);updateApiKeyBtn();document.getElementById('api-input-bar').style.display='none';apiInputOpen=false;}
+function updateApiKeyBtn(){const btn=document.getElementById('btn-apikey');if(apiKey){btn.className='btn-apikey';btn.textContent='🔑 接続済';}else{btn.className='btn-apikey empty';btn.textContent='🔑 APIキー';}}
+
+// ===== TABS =====
+function switchTab(t){
+  document.getElementById('content-fridge').style.display=t==='fridge'?'block':'none';
+  document.getElementById('content-recipe').style.display=t==='recipe'?'block':'none';
+  document.getElementById('tab-fridge').className='tab-btn'+(t==='fridge'?' active':'');
+  document.getElementById('tab-recipe').className='tab-btn'+(t==='recipe'?' active':'');
+  if(t==='recipe'){renderIngredients();renderSettingsBadges();}
+}
+
+// ===== FRIDGE =====
+function renderFridge(){
+  const sorted=[...fridge].sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
+  const el=document.getElementById('fridge-list');
+  if(!sorted.length){
+    el.innerHTML='<div class="fridge-empty"><div class="ei">🛒</div><p>レシートをスキャンして食材を登録しよう</p></div>';
+    return;
+  }
+  el.innerHTML='<div class="fridge-count">'+sorted.length+'品 ・ 賞味期限順</div>'+
+    sorted.map(item=>{
+      const d=daysUntil(item.expiry),c=expiryColor(d);
+      return '<div class="fridge-item"><div style="flex:1"><div class="fridge-item-name">'+item.name+'</div><div class="fridge-item-date">購入: '+item.purchaseDate+'</div></div>'+
+        '<span class="expiry-badge" style="color:'+c+';background:'+c+'22">'+expiryLabel(d)+'</span>'+
+        '<button class="btn-remove" onclick="removeItem(\''+item.id+'\')">×</button></div>';
+    }).join('');
+}
+function removeItem(id){fridge=fridge.filter(i=>i.id!==id);save('fridge',fridge);renderFridge();renderIngredients();}
+function toggleManual(){manualOpen=!manualOpen;document.getElementById('manual-box').style.display=manualOpen?'block':'none';document.getElementById('btn-manual-toggle').textContent=manualOpen?'▲ 閉じる':'+ 手動で食材を追加';}
+function addManual(){
+  const name=document.getElementById('inp-manual-name').value.trim();
+  const pd=document.getElementById('inp-manual-date').value;
+  if(!name)return;
+  if(fridge.find(i=>i.name===name))return;
+  fridge.push({id:Date.now()+'_'+name,name,purchaseDate:pd,expiry:predictExpiry(name,pd),qty:1});
+  save('fridge',fridge);
+  document.getElementById('inp-manual-name').value='';
+  renderFridge();renderIngredients();
+}
+function confirmReset(){closeMenu();document.getElementById('reset-modal').style.display='flex';}
+function doReset(){fridge=[];save('fridge',fridge);renderFridge();renderIngredients();document.getElementById('reset-modal').style.display='none';}
+
+// ===== SCAN =====
+function triggerScan(){document.getElementById('file-input').click();}
+function onFileSelected(e){const f=e.target.files[0];if(f)scanReceipt(f);e.target.value='';}
+
+async function scanReceipt(file){
+  const btn=document.getElementById('scan-btn');
+  const errEl=document.getElementById('scan-error');
+  btn.disabled=true;btn.className='scan-btn scanning';
+  btn.innerHTML='<span style="width:16px;height:16px;border:2px solid #444;border-top-color:#FF6B35;border-radius:50%;display:inline-block;animation:spin 0.8s linear infinite"></span>AIが解析中';
+  errEl.style.display='none';
+  document.getElementById('progress-box').style.display='block';
+  document.getElementById('scan-confirm-area').innerHTML='';
+  scanResultData=null;
+
+  const steps=[{p:15,l:'画像を読み込み中…'},{p:35,l:'レシートの向きを確認中…'},{p:55,l:'日付・店名を解析中…'},{p:75,l:'商品リストを読み取り中…'},{p:90,l:'金額を確認中…'}];
+  let idx=0;
+  const ticker=setInterval(()=>{if(idx<steps.length){setProgress(steps[idx].p,steps[idx].l);idx++;}},1000);
+
+  try{
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+    const today=new Date().toISOString().split('T')[0];
+    const headers={'Content-Type':'application/json'};
+    if(apiKey)headers['x-api-key']=apiKey;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers,
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',max_tokens:2000,
+        system:'あなたは日本のスーパーやコンビニのレシートを読み取る専門家です。レシートの画像を詳細に解析し、正確にJSON形式で返答します。マークダウンや説明文は一切不要です。JSONのみ返してください。',
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},
+          {type:'text',text:'このレシート画像を注意深く読み取ってください。今日の日付は'+today+'です。\n\n以下のJSON形式のみで返答（マークダウン不要）:\n{"store":"店名","date":"YYYY-MM-DD","items":[{"name":"商品名","price":198,"qty":1}]}\n\n読み取りルール:\n1.【日付】レシートの購入日をYYYY-MM-DD形式に変換。令和6年=2024年。不明なら'+today+'\n2.【店名】レシート上部の店舗名・屋号\n3.【商品リスト】購入した全商品。name=商品名そのまま、price=単価(整数円)、qty=個数(不明は1)\n4.【除外】消費税内訳・合計行・支払方法・ポイント情報は含めない\n5.読み取れない文字は最善の推測で補完する'}
+        ]}]
+      })
+    });
+    if(!resp.ok){const t=await resp.text();showScanError('APIエラー('+resp.status+'): '+t.slice(0,80));return;}
+    const data=await resp.json();
+    const raw=(data.content||[]).map(b=>b.text||'').join('');
+    const parsed=extractJSON(raw);
+    if(!parsed||!parsed.items||!parsed.items.length){showScanError('読み取り失敗。画像が鮮明か確認してください。');return;}
+    scanResultData=parsed;
+    renderScanConfirm(parsed);
+  }catch(e){showScanError('エラー: '+e.message);}
+  finally{
+    clearInterval(ticker);
+    setProgress(100,'完了！');
+    setTimeout(()=>{
+      document.getElementById('progress-box').style.display='none';
+      btn.disabled=false;btn.className='scan-btn';
+      btn.innerHTML='<span style="font-size:20px">📷</span>レシートをスキャンして食材を自動登録';
+    },600);
+  }
+}
+
+function setProgress(pct,label){
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('progress-pct').textContent=pct+'%';
+  document.getElementById('progress-label').textContent=label;
+  [15,55,75,90,100].forEach((t,i)=>{
+    const done=pct>=t;
+    document.getElementById('sd'+i).className='step-dot'+(done?' done':'');
+    document.getElementById('sd'+i).textContent=done?'✓':'';
+    document.getElementById('sl'+i).className='step-label'+(done?' done':'');
+  });
+}
+function showScanError(msg){const el=document.getElementById('scan-error');el.textContent=msg;el.style.display='block';}
+
+function renderScanConfirm(data){
+  scanConfirmSelected=new Set(data.items.map((_,i)=>i));
+  const el=document.getElementById('scan-confirm-area');
+  el.innerHTML='<div class="scan-confirm" id="scan-confirm-box">'+
+    '<div class="scan-confirm-header"><div><div class="scan-store">'+(data.store||'店名不明')+'</div><div class="scan-date">'+(data.date||'')+'</div></div><span class="scan-badge">'+data.items.length+'品を認識</span></div>'+
+    '<div class="confirm-hint">冷蔵庫に追加する食材を選んでください</div>'+
+    data.items.map((it,i)=>'<div class="confirm-item" onclick="toggleConfirm('+i+')">'+
+      '<div class="confirm-check checked" id="cc'+i+'">✓</div>'+
+      '<span class="confirm-name checked" id="cn'+i+'">'+it.name+'</span>'+
+      (it.price>0?'<span class="confirm-price">¥'+it.price+'</span>':'')+
+    '</div>').join('')+
+    '<div class="confirm-btns">'+
+    '<button class="btn-cancel" onclick="cancelScan()">キャンセル</button>'+
+    '<button class="btn-add" id="btn-confirm-add" onclick="confirmScan()">'+scanConfirmSelected.size+'品を追加する</button>'+
+    '</div></div>';
+}
+
+function toggleConfirm(i){
+  if(scanConfirmSelected.has(i))scanConfirmSelected.delete(i);else scanConfirmSelected.add(i);
+  document.getElementById('cc'+i).className='confirm-check'+(scanConfirmSelected.has(i)?' checked':'');
+  document.getElementById('cc'+i).textContent=scanConfirmSelected.has(i)?'✓':'';
+  document.getElementById('cn'+i).className='confirm-name'+(scanConfirmSelected.has(i)?' checked':'');
+  const btn=document.getElementById('btn-confirm-add');
+  btn.disabled=scanConfirmSelected.size===0;
+  btn.textContent=scanConfirmSelected.size+'品を追加する';
+}
+function cancelScan(){document.getElementById('scan-confirm-area').innerHTML='';scanResultData=null;}
+function confirmScan(){
+  if(!scanResultData)return;
+  const pd=scanResultData.date||new Date().toISOString().split('T')[0];
+  const existing=new Set(fridge.map(i=>i.name));
+  scanResultData.items.forEach((it,i)=>{
+    if(scanConfirmSelected.has(i)&&!existing.has(it.name)){
+      fridge.push({id:Date.now()+'_'+it.name+'_'+Math.random(),name:it.name,purchaseDate:pd,expiry:predictExpiry(it.name,pd),qty:it.qty||1});
+    }
+  });
+  save('fridge',fridge);
+  document.getElementById('scan-confirm-area').innerHTML='';
+  scanResultData=null;
+  renderFridge();renderIngredients();
+}
+
+// ===== RECIPE =====
+function renderIngredients(){
+  const sorted=[...fridge].sort((a,b)=>new Date(a.expiry)-new Date(b.expiry));
+  const el=document.getElementById('ingredient-selector');
+  const btn=document.getElementById('btn-generate');
+  if(!fridge.length){
+    el.innerHTML='<div class="recipe-empty"><div class="ei">🥘</div><p style="color:var(--muted);font-size:14px;font-family:\'Noto Sans JP\',sans-serif">まず冷蔵庫に食材を登録してください</p></div>';
+    btn.disabled=true;btn.textContent='🍳 食材を選んでください';
+    return;
+  }
+  el.innerHTML='<div class="ingredient-header"><span class="ingredient-label">使う食材を選択</span><button class="btn-auto" onclick="autoSelect()">⚡ 期限順で自動選択</button></div>'+
+    sorted.map(item=>{
+      const sel=selectedIds.has(item.id),d=daysUntil(item.expiry),c=expiryColor(d);
+      return '<div class="ingredient-item'+(sel?' selected':'')+'" onclick="toggleIngredient(\''+item.id+'\')">'+
+        '<div class="ing-check'+(sel?' checked':'')">'+(sel?'✓':'')+'</div>'+
+        '<span class="ing-name">'+item.name+'</span>'+
+        '<span class="expiry-badge" style="color:'+c+';background:'+c+'22">'+expiryLabel(d)+'</span>'+
+        '</div>';
+    }).join('');
+  const cnt=selectedIds.size;
+  btn.disabled=cnt===0;
+  btn.textContent=cnt>0?'🍳 '+cnt+'品でレシピを作る':'🍳 食材を選んでください';
+}
+function toggleIngredient(id){
+  if(selectedIds.has(id))selectedIds.delete(id);else selectedIds.add(id);
+  renderIngredients();
+}
+function autoSelect(){
+  selectedIds=new Set([...fridge].sort((a,b)=>new Date(a.expiry)-new Date(b.expiry)).slice(0,4).map(i=>i.id));
+  renderIngredients();
+}
+
+async function generateRecipe(){
+  const chosen=fridge.filter(i=>selectedIds.has(i.id));
+  if(!chosen.length)return;
+  const btn=document.getElementById('btn-generate');
+  const errEl=document.getElementById('recipe-error');
+  btn.disabled=true;
+  btn.innerHTML='<span style="width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:spin 0.8s linear infinite"></span>レシピを考え中…';
+  errEl.style.display='none';
+  document.getElementById('recipe-result').innerHTML='';
+  currentRecipe=null;shoppingChecked=new Set();
+
+  try{
+    const {maxTime,dishCount,spiceLevel,cookStyle,riceSize}=settings;
+    const dishNote=dishCount==='少なめ'?'できるだけ少ない調理器具・少ない洗い物で':dishCount==='多くてもOK'?'洗い物の量は気にしなくてよい':'洗い物は普通程度で';
+    const prompt='食材: '+chosen.map(i=>i.name).join(', ')+'。1人分のレシピを1つ提案。条件: 調理'+maxTime+'分以内、'+dishNote+'、味は'+spiceLevel+'、ご飯の量は'+riceSize+(cookStyle!=='何でも'?'、'+cookStyle+'を優先':'')+
+      '。JSONのみ返答: {"name":"料理名","emoji":"🍳","time":"15分","difficulty":"簡単","description":"説明","calories":"400kcal","protein":"15g","carbs":"50g","fat":"10g","steps":["手順1","手順2","手順3"],"missing":[],"tip":"コツ","dishes":"使う調理器具"}';
+    const headers={'Content-Type':'application/json'};
+    if(apiKey)headers['x-api-key']=apiKey;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers,
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,
+        system:'日本語で料理を提案するアシスタントです。必ずJSONオブジェクトのみで返答してください。マークダウン・バッククォート・説明文は一切不要です。',
+        messages:[{role:'user',content:prompt}]})
+    });
+    if(!resp.ok){const t=await resp.text();errEl.textContent='APIエラー('+resp.status+'): '+t.slice(0,80);errEl.style.display='block';return;}
+    const data=await resp.json();
+    const parsed=extractJSON((data.content||[]).map(b=>b.text||'').join(''));
+    if(!parsed){errEl.textContent='パースエラー。もう一度試してください。';errEl.style.display='block';return;}
+    currentRecipe=parsed;
+    fridge=fridge.filter(i=>!selectedIds.has(i.id));
+    selectedIds=new Set();
+    save('fridge',fridge);
+    renderFridge();renderIngredients();
+    renderRecipe();
+  }catch(e){errEl.textContent='エラー: '+e.message;errEl.style.display='block';}
+  finally{btn.disabled=false;btn.textContent='🍳 食材を選んでください';}
+}
+
+function renderRecipe(){
+  if(!currentRecipe)return;
+  const r=currentRecipe;
+  const el=document.getElementById('recipe-result');
+  el.innerHTML='<div class="recipe-card">'+
+    '<div class="recipe-header">'+
+      '<div class="recipe-emoji">'+r.emoji+'</div>'+
+      '<div class="recipe-name">'+r.name+'</div>'+
+      '<div class="recipe-desc">'+r.description+'</div>'+
+      (r.dishes?'<div class="recipe-dishes">🍽 '+r.dishes+'</div>':'')+
+      '<div class="recipe-stats">'+
+        '<div class="recipe-stat"><div class="si">⏱</div><div class="sv">'+r.time+'</div></div>'+
+        '<div class="recipe-stat"><div class="si">📊</div><div class="sv">'+r.difficulty+'</div></div>'+
+        '<div class="recipe-stat"><div class="si">🔥</div><div class="sv">'+r.calories+'</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="sub-tabs">'+
+      '<button class="sub-tab active" id="st-steps" onclick="switchRecipeTab(\'作り方\')">作り方</button>'+
+      '<button class="sub-tab" id="st-nutr" onclick="switchRecipeTab(\'栄養\')">栄養</button>'+
+      '<button class="sub-tab" id="st-shop" onclick="switchRecipeTab(\'買い物\')">'+'買い物'+(r.missing&&r.missing.length?' ('+r.missing.length+')':'')+'</button>'+
+    '</div>'+
+    '<div class="sub-content" id="recipe-sub-content">'+renderRecipeSubTab('作り方')+'</div>'+
+  '</div>';
+  activeRecipeTab='作り方';
+}
+
+function switchRecipeTab(t){
+  activeRecipeTab=t;
+  ['作り方','栄養','買い物'].forEach(tab=>{
+    const ids={'作り方':'st-steps','栄養':'st-nutr','買い物':'st-shop'};
+    const btn=document.getElementById(ids[tab]);
+    if(btn)btn.className='sub-tab'+(tab===t?' active':'');
+  });
+  document.getElementById('recipe-sub-content').innerHTML=renderRecipeSubTab(t);
+}
+
+function renderRecipeSubTab(t){
+  const r=currentRecipe;
+  if(t==='作り方'){
+    return (r.steps||[]).map((s,i)=>'<div class="step-row"><div class="step-num'+(i===0?' first':'')+'">'+( i+1)+'</div><div class="step-text">'+s+'</div></div>').join('')+
+      (r.tip?'<div class="tip-box"><span>💡</span><div class="tip-text">'+r.tip+'</div></div>':'');
+  }
+  if(t==='栄養'){
+    return [
+      {l:'カロリー',v:r.calories,max:800,c:'#FF6B35'},
+      {l:'タンパク質',v:r.protein,max:60,c:'#4CAF7D'},
+      {l:'炭水化物',v:r.carbs,max:100,c:'#4A9EFF'},
+      {l:'脂質',v:r.fat,max:50,c:'#FFB830'}
+    ].map(n=>'<div class="nutr-row"><div class="nutr-header"><span class="nutr-label">'+n.l+'</span><span class="nutr-val">'+n.v+'</span></div>'+
+      '<div class="nutr-bar-bg"><div class="nutr-bar-fill" style="width:'+Math.min((parseInt(n.v)/n.max)*100,100)+'%;background:'+n.c+'"></div></div></div>').join('')+
+      '<div class="nutr-note">※ 目安値です</div>';
+  }
+  if(t==='買い物'){
+    const missing=r.missing||[];
+    if(!missing.length)return '<div class="shop-empty"><div class="se">✅</div><p style="color:var(--muted);font-size:13px;font-family:\'Noto Sans JP\',sans-serif">追加食材なし！</p></div>';
+    return missing.map((name,i)=>'<div class="shop-item" onclick="toggleShop('+i+')">'+
+      '<div class="shop-check'+(shoppingChecked.has(i)?' checked':'')+'">'+( shoppingChecked.has(i)?'✓':'')+'</div>'+
+      '<span class="shop-name'+(shoppingChecked.has(i)?' checked':'')+'">'+name+'</span>'+
+    '</div>').join('');
+  }
+  return '';
+}
+function toggleShop(i){
+  if(shoppingChecked.has(i))shoppingChecked.delete(i);else shoppingChecked.add(i);
+  document.getElementById('recipe-sub-content').innerHTML=renderRecipeSubTab('買い物');
+}
+
+// ===== SETTINGS =====
+function initSettingsUI(){
+  const segs={
+    'seg-rice':['小','普通','大','大盛り'],
+    'seg-dish':['少なめ','普通','多くてもOK'],
+    'seg-spice':['薄め','普通','濃いめ'],
+    'seg-style':['何でも','炒め物','煮物','レンジ']
+  };
+  const keys={'seg-rice':'riceSize','seg-dish':'dishCount','seg-spice':'spiceLevel','seg-style':'cookStyle'};
+  for(const [id,opts] of Object.entries(segs)){
+    const el=document.getElementById(id);
+    el.innerHTML=opts.map(o=>'<button class="seg-btn'+(settings[keys[id]]===o?' active':'')+'" onclick="setSetting(\''+keys[id]+'\',\''+o+'\',\''+id+'\')">'+o+'</button>').join('');
+  }
+  document.getElementById('range-time').value=settings.maxTime;
+  document.getElementById('range-display').innerHTML=settings.maxTime+'<span>分</span>';
+}
+function setSetting(key,val,segId){
+  settings[key]=val;
+  const keys={'seg-rice':'riceSize','seg-dish':'dishCount','seg-spice':'spiceLevel','seg-style':'cookStyle'};
+  const segs={riceSize:'seg-rice',dishCount:'seg-dish',spiceLevel:'seg-spice',cookStyle:'seg-style'};
+  const id=segs[key];
+  document.getElementById(id).querySelectorAll('.seg-btn').forEach(b=>b.className='seg-btn'+(b.textContent===val?' active':''));
+  saveSettings();
+}
+function saveSettings(){save('settings',settings);renderSettingsBadges();}
+function resetSettings(){settings={...DEFAULT_SETTINGS};saveSettings();initSettingsUI();}
+function openSettings(){closeMenu();document.getElementById('settings-modal').style.display='flex';}
+function closeSettings(){document.getElementById('settings-modal').style.display='none';}
+function renderSettingsBadges(){
+  const el=document.getElementById('settings-badges');
+  const badges=['⏱ '+settings.maxTime+'分','🍚 '+settings.riceSize,'🍽 '+settings.dishCount,'🧂 '+settings.spiceLevel];
+  if(settings.cookStyle!=='何でも')badges.push('🔥 '+settings.cookStyle);
+  el.innerHTML=badges.map(b=>'<span class="settings-badge">'+b+'</span>').join('');
+}
+</script>
+</body>
+</html>
