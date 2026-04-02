@@ -153,8 +153,8 @@ function MainApp() {
     try {
       const b64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(",")[1]); r.onerror=rej; r.readAsDataURL(file); });
       const today = new Date().toISOString().split("T")[0];
-      const h = {"Content-Type":"application/json"}; if(apiKey) h["x-api-key"]=apiKey;
-      const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:h,body:JSON.stringify({
+      const h = {"Content-Type":"application/json"};
+      const res = await fetch("/api/chat",{method:"POST",headers:h,body:JSON.stringify({
         model:"claude-sonnet-4-6",max_tokens:2000,
         system:"あなたは日本のスーパーやコンビニのレシートを読み取る専門家です。JSONのみ返してください。",
         messages:[{role:"user",content:[
@@ -192,8 +192,8 @@ function MainApp() {
       const dn = dishCount==="少なめ"?"できるだけ少ない調理器具で":dishCount==="多くてもOK"?"洗い物は気にしない":"洗い物は普通程度で";
       const p = "食材: "+chosen.map(i=>i.name).join(", ")+"。1人分のレシピ1つ。条件: "+maxTime+"分以内、"+dn+"、味は"+spiceLevel+"、ご飯の量は"+riceSize+(cookStyle!=="何でも"?"、"+cookStyle+"を優先":"")+
         '。JSONのみ: {"name":"料理名","emoji":"🍳","time":"15分","difficulty":"簡単","description":"説明","calories":"400kcal","protein":"15g","carbs":"50g","fat":"10g","steps":["手順1","手順2","手順3"],"missing":[],"tip":"コツ","dishes":"使う調理器具"}';
-      const h = {"Content-Type":"application/json"}; if(apiKey) h["x-api-key"]=apiKey;
-      const res = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:h,body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:"日本語でJSONのみで返答。マークダウン不要。",messages:[{role:"user",content:p}]})});
+      const h = {"Content-Type":"application/json"};
+      const res = await fetch("/api/chat",{method:"POST",headers:h,body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:"日本語でJSONのみで返答。マークダウン不要。",messages:[{role:"user",content:p}]})});
       if(!res.ok){const t=await res.text();setRecipeErr("APIエラー("+res.status+"): "+t.slice(0,80));return;}
       const data = await res.json();
       const parsed = xj((data.content||[]).map(b=>b.text||"").join(""));
