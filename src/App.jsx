@@ -19,7 +19,66 @@ const A = "#FF6B35", BG = "#0F0E0C", SF = "#1A1916", CD = "#232220";
 const TX = "#F5F0E8", MU = "#6B6760", GN = "#4CAF7D", YW = "#FFB830";
 const RD = "#FF5555", BL = "#4A9EFF";
 
-const EM = {"鶏肉":3,"豚肉":3,"牛肉":3,"ひき肉":2,"魚":2,"刺身":1,"サーモン":2,"マグロ":2,"ベーコン":7,"ハム":7,"ウインナー":7,"ソーセージ":7,"牛乳":7,"豆腐":4,"卵":21,"チーズ":14,"バター":30,"ヨーグルト":14,"生クリーム":7,"レタス":5,"キャベツ":14,"ほうれん草":4,"小松菜":4,"ねぎ":7,"長ねぎ":7,"玉ねぎ":30,"にんじん":21,"じゃがいも":30,"トマト":5,"きゅうり":5,"なす":5,"ピーマン":7,"ブロッコリー":5,"もやし":3,"白菜":14,"しめじ":5,"えのき":5,"しいたけ":5,"まいたけ":5,"納豆":7,"こんにゃく":7,"油揚げ":5,"厚揚げ":4};
+const EM = {
+  // 肉類
+  "鶏肉":3,"鶏むね":3,"鶏もも":3,"鶏ささみ":3,"鶏皮":3,"手羽":3,
+  "豚肉":3,"豚バラ":3,"豚ロース":3,"豚こま":3,"豚ひれ":3,
+  "牛肉":3,"牛バラ":3,"牛ロース":3,"和牛":3,
+  "ひき肉":2,"合い挽き":2,"鶏ひき":2,"豚ひき":2,"牛ひき":2,
+  "ミンチ":2,"レバー":2,"ホルモン":2,
+  // 魚介類
+  "魚":2,"刺身":1,"さしみ":1,"刺し身":1,
+  "サーモン":2,"鮭":3,"サバ":2,"さば":2,"アジ":2,"あじ":2,
+  "マグロ":1,"まぐろ":1,"ブリ":2,"ぶり":2,"タイ":2,"たい":2,
+  "エビ":2,"えび":2,"イカ":2,"いか":2,"タコ":3,"たこ":3,
+  "ホタテ":2,"はまぐり":1,"あさり":2,"シジミ":2,"かき":2,
+  "ツナ":1095,"缶詰":365,
+  // 加工肉
+  "ベーコン":7,"ハム":7,"ウインナー":7,"ソーセージ":7,
+  "サラミ":14,"コンビーフ":3,
+  // 乳製品・卵
+  "牛乳":7,"ミルク":7,"豆乳":7,
+  "卵":21,"たまご":21,"玉子":21,
+  "チーズ":14,"スライスチーズ":14,"クリームチーズ":14,
+  "バター":30,"マーガリン":30,
+  "ヨーグルト":14,"生クリーム":7,"ホイップ":7,
+  // 豆腐・大豆製品
+  "豆腐":4,"絹豆腐":4,"木綿豆腐":4,"絹ごし":4,
+  "厚揚げ":4,"油揚げ":5,"がんも":4,"豆腐":4,
+  "納豆":7,"おから":3,"湯葉":3,
+  // 野菜
+  "レタス":5,"サラダ菜":4,"水菜":5,"春菊":4,"ほうれん草":4,"小松菜":4,
+  "キャベツ":14,"紫キャベツ":14,"白菜":14,"チンゲン菜":5,
+  "ねぎ":7,"長ねぎ":7,"小ねぎ":5,"万能ねぎ":5,"わけぎ":5,
+  "玉ねぎ":30,"新玉ねぎ":10,"赤玉ねぎ":30,
+  "にんじん":21,"大根":14,"かぶ":7,"ごぼう":14,"れんこん":14,
+  "じゃがいも":30,"さつまいも":30,"里芋":14,"山芋":14,"長芋":14,
+  "トマト":5,"ミニトマト":7,"プチトマト":7,
+  "きゅうり":5,"なす":5,"ズッキーニ":5,"オクラ":3,
+  "ピーマン":7,"パプリカ":10,"唐辛子":7,
+  "ブロッコリー":5,"カリフラワー":7,"アスパラ":4,"セロリ":7,
+  "もやし":3,"豆もやし":3,"枝豆":3,
+  "しめじ":5,"えのき":5,"しいたけ":5,"まいたけ":5,"エリンギ":7,"なめこ":5,
+  "アボカド":3,"コーン":3,"とうもろこし":3,
+  "生姜":14,"しょうが":14,"にんにく":30,"ガーリック":30,
+  // 果物
+  "いちご":4,"苺":4,"バナナ":5,"りんご":14,"みかん":14,
+  "オレンジ":14,"グレープフルーツ":14,"レモン":14,"ライム":14,
+  "ぶどう":5,"桃":4,"もも":4,"梨":7,"なし":7,"柿":7,
+  "キウイ":7,"メロン":5,"スイカ":5,"パイナップル":5,
+  // 練り物・加工食品
+  "かまぼこ":7,"ちくわ":7,"はんぺん":4,"さつま揚げ":4,
+  "こんにゃく":7,"しらたき":7,
+  // 惣菜・調理済み
+  "惣菜":2,"弁当":1,"おにぎり":1,"サラダ":2,"揚げ物":2,"から揚げ":2,
+  // パン・麺
+  "食パン":5,"パン":4,"バゲット":2,"ベーグル":3,
+  "生麺":3,"うどん":3,"そば":3,"ラーメン":3,"パスタ":3,
+  // その他
+  "もずく":14,"わかめ":14,"昆布":30,"のり":180,
+  "漬物":14,"キムチ":30,"梅干し":365,
+  "味噌":90,"みそ":90,
+};
 const DS = {maxTime:30,dishCount:"少なめ",spiceLevel:"普通",cookStyle:"何でも",riceSize:"普通"};
 
 function predExp(name, pd) {
@@ -251,6 +310,7 @@ function MainApp() {
   const [scanData, setScanData] = useState(null);
   const [cfmSel, setCfmSel] = useState(new Set());
   const [manualOpen, setManualOpen] = useState(false);
+  const [editingExpiry, setEditingExpiry] = useState(null); // {id, expiry}
   const [mName, setMName] = useState("");
   const [mQty, setMQty] = useState(1);
   const [mDate, setMDate] = useState(new Date().toISOString().split("T")[0]);
@@ -311,7 +371,7 @@ function MainApp() {
         system:"あなたは日本のスーパーやコンビニのレシートを読み取る専門家です。JSONのみ返してください。",
         messages:[{role:"user",content:[
           {type:"image",source:{type:"base64",media_type:file.type||"image/jpeg",data:b64}},
-          {type:"text",text:"このレシート画像を読み取ってください。今日は"+today+"です。\nJSONのみで返答:{\"store\":\"店名\",\"date\":\"YYYY-MM-DD\",\"items\":[{\"name\":\"商品名\",\"price\":198,\"qty\":1}]}\nルール:1.日付はYYYY-MM-DD(令和6年=2024年)不明なら"+today+" 2.全商品を列挙 3.消費税・合計・支払方法は除外"}
+          {type:"text",text:"このレシート画像を注意深く読み取ってください。今日は"+today+"です。\nJSONのみで返答（マークダウン不要）:\n{\"store\":\"店名\",\"date\":\"YYYY-MM-DD\",\"items\":[{\"name\":\"商品名\",\"price\":198,\"qty\":1,\"expiryDays\":7}]}\n\nルール:\n1. 日付はYYYY-MM-DD形式(令和6年=2024年)。不明なら"+today+"\n2. 全商品を列挙。消費税・合計・支払方法は除外\n3. expiryDaysは購入日からの賞味期限日数をAIが推定:\n   刺身・生魚:1-2日 / 生肉・ひき肉:2-3日 / 加工肉:7日\n   豆腐:4日 / 納豆:7日 / 卵:21日 / 牛乳:7日 / チーズ:14日\n   葉物野菜:4-5日 / 根菜:14-30日 / 果物:3-7日\n   惣菜・弁当:1-2日 / パン:3-5日 / 冷凍品:90日 / 缶詰:365日"}
         ]}]
       })});
       if(!res.ok){const t=await res.text();setScanErr("APIエラー("+res.status+"): "+t.slice(0,80));return;}
@@ -330,7 +390,17 @@ function MainApp() {
   const confirmScan = () => {
     if(!scanData) return;
     const pd = scanData.date||new Date().toISOString().split("T")[0];
-    const newItems = scanData.items.filter((_,i)=>cfmSel.has(i)).map(it=>({id:Date.now()+"_"+it.name+"_"+Math.random(),name:it.name,purchaseDate:pd,expiry:predExp(it.name,pd),qty:it.qty||1}));
+    const newItems = scanData.items.filter((_,i)=>cfmSel.has(i)).map(it=>{
+      let expiry;
+      if (it.expiryDays) {
+        const d = new Date(pd);
+        d.setDate(d.getDate() + it.expiryDays);
+        expiry = d.toISOString().split("T")[0];
+      } else {
+        expiry = predExp(it.name, pd);
+      }
+      return {id:Date.now()+"_"+it.name+"_"+Math.random(),name:it.name,purchaseDate:pd,expiry,qty:it.qty||1};
+    });
     setFridge([...fridge,...newItems]);
     setScanData(null);
   };
@@ -512,13 +582,27 @@ usedQtyには使用する食材名と個数を必ず含めること。`;
               {sorted.map(it=>{
                 const d=daysTo(it.expiry),c=ec(d);
                 return (
-                  <div key={it.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:SF,borderRadius:12,marginBottom:8,border:"1px solid #2A2927"}}>
-                    <div style={{flex:1}}>
-                      <p style={{fontSize:15,fontFamily:"'Noto Sans JP',sans-serif",fontWeight:500}}>{it.name}{it.qty>1&&<span style={{fontSize:12,color:MU,marginLeft:6}}>×{it.qty}</span>}</p>
-                      <p style={{fontSize:11,color:MU,marginTop:2}}>購入: {it.purchaseDate}</p>
+                  <div key={it.id} style={{background:SF,borderRadius:12,marginBottom:8,border:"1px solid #2A2927",overflow:"hidden"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px"}}>
+                      <div style={{flex:1}}>
+                        <p style={{fontSize:15,fontFamily:"'Noto Sans JP',sans-serif",fontWeight:500}}>{it.name}{it.qty>1&&<span style={{fontSize:12,color:MU,marginLeft:6}}>×{it.qty}</span>}</p>
+                        <p style={{fontSize:11,color:MU,marginTop:2}}>購入: {it.purchaseDate}</p>
+                      </div>
+                      <span onClick={()=>setEditingExpiry(editingExpiry?.id===it.id?null:{id:it.id,expiry:it.expiry})}
+                        style={{fontSize:12,fontWeight:700,color:c,background:c+"22",padding:"3px 10px",borderRadius:20,cursor:"pointer",userSelect:"none"}}>
+                        {el(d)} ✎
+                      </span>
+                      <button onClick={()=>setFridge(fridge.filter(i=>i.id!==it.id))} style={{background:"none",border:"none",color:MU,fontSize:18,padding:"0 2px",lineHeight:1,cursor:"pointer"}}>×</button>
                     </div>
-                    <span style={{fontSize:12,fontWeight:700,color:c,background:c+"22",padding:"3px 10px",borderRadius:20}}>{el(d)}</span>
-                    <button onClick={()=>setFridge(fridge.filter(i=>i.id!==it.id))} style={{background:"none",border:"none",color:MU,fontSize:18,padding:"0 2px",lineHeight:1,cursor:"pointer"}}>×</button>
+                    {editingExpiry?.id===it.id && (
+                      <div style={{padding:"0 14px 12px",borderTop:"1px solid #2A2927",display:"flex",alignItems:"center",gap:8}}>
+                        <span style={{fontSize:12,color:MU,whiteSpace:"nowrap",fontFamily:"'Noto Sans JP',sans-serif"}}>賞味期限:</span>
+                        <input type="date" value={editingExpiry.expiry} onChange={e=>setEditingExpiry(prev=>({...prev,expiry:e.target.value}))}
+                          style={{flex:1,background:CD,border:"1px solid #3A3835",borderRadius:8,padding:"7px 10px",color:TX,fontSize:13,outline:"none"}}/>
+                        <button onClick={()=>{setFridge(f=>f.map(i=>i.id===it.id?{...i,expiry:editingExpiry.expiry}:i));setEditingExpiry(null);}}
+                          style={{background:A,border:"none",borderRadius:8,padding:"7px 14px",color:"#fff",fontSize:13,fontWeight:700,fontFamily:"'Syne',sans-serif",cursor:"pointer",whiteSpace:"nowrap"}}>保存</button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
