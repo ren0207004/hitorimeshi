@@ -240,10 +240,8 @@ function SignupModal({ onClose }) {
 function MainApp() {
   const [tab, setTab] = useState("fridge");
   const [fridge, setFridgeState] = useState(() => ld("fridge",[]));
-  const [apiKey, setApiKeyState] = useState(() => ld("apiKey",""));
   const [settings, setSettingsState] = useState(() => ({...DS,...ld("settings",{})}));
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showApiBar, setShowApiBar] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showReset, setShowReset] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -262,11 +260,9 @@ function MainApp() {
   const [recipeTab, setRecipeTab] = useState("作り方");
   const [recipeErr, setRecipeErr] = useState("");
   const [shopChk, setShopChk] = useState(new Set());
-  const [tmpApiKey, setTmpApiKey] = useState("");
   const fileRef = useRef();
 
   const setFridge = v => { setFridgeState(v); sv("fridge",v); };
-  const setApiKey = v => { setApiKeyState(v); sv("apiKey",v); };
   const setSettings = v => { setSettingsState(v); sv("settings",v); };
 
   const sorted = [...fridge].sort((a,b) => new Date(a.expiry)-new Date(b.expiry));
@@ -372,9 +368,7 @@ function MainApp() {
           <span style={{fontSize:22,fontWeight:800,letterSpacing:-1}}>めし</span>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <button onClick={()=>{setShowApiBar(s=>!s);setTmpApiKey(apiKey);}} style={{background:apiKey?"#1a2a1a":"#2a1a1a",border:"1px solid "+(apiKey?"#2a4a2a":"#4a2a2a"),borderRadius:8,padding:"5px 10px",fontSize:10,color:apiKey?GN:RD,fontFamily:"'Syne',sans-serif",cursor:"pointer"}}>
-            {apiKey?"🔑 接続済":"🔑 APIキー"}
-          </button>
+
           <button onClick={()=>setMenuOpen(s=>!s)} style={{background:"none",border:"none",padding:4,cursor:"pointer",display:"flex",flexDirection:"column",gap:4}}>
             {[0,1,2].map(i=><span key={i} style={{display:"block",width:20,height:2,background:TX,borderRadius:2,transition:"all .2s",transform:menuOpen&&i===0?"rotate(45deg) translate(4px,4px)":menuOpen&&i===2?"rotate(-45deg) translate(4px,-4px)":"none",opacity:menuOpen&&i===1?0:1}}/>)}
           </button>
@@ -395,17 +389,7 @@ function MainApp() {
       </div>
       {menuOpen && <div onClick={()=>setMenuOpen(false)} style={{position:"fixed",inset:0,zIndex:50}}/>}
 
-      {/* API Bar */}
-      {showApiBar && (
-        <div style={{padding:"12px 20px",background:SF,borderBottom:"1px solid #2A2927"}}>
-          <p style={{fontSize:11,color:MU,marginBottom:6}}>Anthropic APIキー</p>
-          <div style={{display:"flex",gap:8}}>
-            <input type="password" value={tmpApiKey} onChange={e=>setTmpApiKey(e.target.value)} placeholder="sk-ant-..."
-              style={{flex:1,background:CD,border:"1px solid #3A3835",borderRadius:8,padding:"10px 12px",color:TX,fontSize:13,outline:"none",fontFamily:"monospace"}}/>
-            <button onClick={()=>{setApiKey(tmpApiKey);setShowApiBar(false);}} style={{background:A,border:"none",borderRadius:8,padding:"0 16px",color:"#fff",fontSize:13,fontWeight:700,fontFamily:"'Syne',sans-serif",cursor:"pointer"}}>保存</button>
-          </div>
-        </div>
-      )}
+
 
       {/* Tabs */}
       <div style={{display:"flex",padding:"10px 20px 0",gap:4}}>
