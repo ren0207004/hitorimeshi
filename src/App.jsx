@@ -255,6 +255,7 @@ function MainApp() {
   const [mQty, setMQty] = useState(1);
   const [mDate, setMDate] = useState(new Date().toISOString().split("T")[0]);
   const [selIds, setSelIds] = useState(new Set());
+  const [selQty, setSelQty] = useState({});
   const [generating, setGenerating] = useState(false);
   const [recipe, setRecipe] = useState(null);
   const [recipeTab, setRecipeTab] = useState("作り方");
@@ -341,8 +342,11 @@ function MainApp() {
     try {
       const {maxTime,dishCount,spiceLevel,cookStyle,riceSize} = settings;
       const dn = dishCount==="少なめ"?"できるだけ少ない調理器具で":dishCount==="多くてもOK"?"洗い物は気にしない":"洗い物は普通程度で";
-      const p = "食材: "+chosen.map(i=>i.name).join(", ")+"。1人分のレシピ1つ。条件: "+maxTime+"分以内、"+dn+"、味は"+spiceLevel+"、ご飯の量は"+riceSize+(cookStyle!=="何でも"?"、"+cookStyle+"を優先":"")+
-        '。JSONのみ: {"name":"料理名","emoji":"🍳","time":"15分","difficulty":"簡単","description":"説明","calories":"400kcal","protein":"15g","carbs":"50g","fat":"10g","steps":["手順1","手順2","手順3"],"missing":[],"tip":"コツ","dishes":"使う調理器具"}';
+      const ingredientList = chosen.map(i=>`${i.name}(在庫${i.qty}個)`).join(", ");
+      const p = `食材: ${ingredientList}。1人分のレシピ1つ。条件: ${maxTime}分以内、${dn}、味は${spiceLevel}、ご飯の量は${riceSize}${cookStyle!=="何でも"?"、"+cookStyle+"を優先":""}。
+ご飯の量(${riceSize})に合わせて各食材の適切な使用個数をAIが判断すること。在庫数を超えないこと。
+JSONのみ返答: {"name":"料理名","emoji":"🍳","time":"15分","difficulty":"簡単","description":"説明","calories":"400kcal","protein":"15g","carbs":"50g","fat":"10g","steps":["手順1","手順2","手順3"],"missing":[],"tip":"コツ","dishes":"使う調理器具","usedQty":{"食材名":使用個数}}
+usedQtyには使用する食材名と個数を必ず含めること。`;
       const h = {"Content-Type":"application/json"};
       const res = await fetch("/api/chat",{method:"POST",headers:h,body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:"日本語でJSONのみで返答。マークダウン不要。",messages:[{role:"user",content:p}]})});
       if(!res.ok){const t=await res.text();setRecipeErr("APIエラー("+res.status+"): "+t.slice(0,80));return;}
@@ -350,7 +354,18 @@ function MainApp() {
       const parsed = xj((data.content||[]).map(b=>b.text||"").join(""));
       if(!parsed){setRecipeErr("パースエラー。もう一度試してください。");return;}
       setRecipe(parsed); setRecipeTab("作り方"); setShopChk(new Set());
-      setFridge(fridge.filter(i=>!selIds.has(i.id))); setSelIds(new Set());
+      // Use AI-decided quantities, fall back to 1 if not specified
+      const aiUsedQty = parsed.usedQty || {};
+      setFridge(prev => {
+        return prev.map(item => {
+          if (!selIds.has(item.id)) return item;
+          const used = aiUsedQty[item.name] || 1;
+          const remaining = item.qty - used;
+          if (remaining <= 0) return null;
+          return {...item, qty: remaining};
+        }).filter(Boolean);
+      });
+      setSelIds(new Set()); setSelQty({});
     } catch(e) { setRecipeErr("エラー: "+e.message); }
     finally { setGenerating(false); }
   };
@@ -470,8 +485,11 @@ function MainApp() {
                 style={{width:"100%",background:CD,border:"1px solid #3A3835",borderRadius:8,padding:"10px 12px",color:TX,fontSize:14,outline:"none",fontFamily:"'Noto Sans JP',sans-serif",marginBottom:8}}/>
               <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
                 <label style={{fontSize:12,color:MU,whiteSpace:"nowrap"}}>個数</label>
-                <input type="number" value={mQty} onChange={e=>setMQty(Math.max(1,parseInt(e.target.value)||1))} min={1} max={99}
-                  style={{width:64,background:CD,border:"1px solid #3A3835",borderRadius:8,padding:"9px 10px",color:TX,fontSize:13,outline:"none",textAlign:"center"}}/>
+                <div style={{display:"flex",alignItems:"center",gap:0,background:CD,border:"1px solid #3A3835",borderRadius:8,overflow:"hidden"}}>
+                  <button onClick={()=>setMQty(q=>Math.max(1,q-1))} style={{width:36,height:36,background:"none",border:"none",color:TX,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>−</button>
+                  <span style={{minWidth:32,textAlign:"center",fontSize:14,color:TX,fontWeight:700}}>{mQty}</span>
+                  <button onClick={()=>setMQty(q=>Math.min(99,q+1))} style={{width:36,height:36,background:"none",border:"none",color:TX,fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>＋</button>
+                </div>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
                 <label style={{fontSize:12,color:MU,whiteSpace:"nowrap"}}>購入日</label>
@@ -528,14 +546,14 @@ function MainApp() {
             <>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <p style={{fontSize:12,color:MU,letterSpacing:1}}>使う食材を選択</p>
-                <button onClick={()=>setSelIds(new Set(sorted.slice(0,4).map(i=>i.id)))} style={{background:"transparent",border:"1px solid #3A3835",borderRadius:8,padding:"5px 12px",color:YW,fontSize:12,fontFamily:"'Syne',sans-serif",cursor:"pointer"}}>⚡ 期限順で自動選択</button>
+                <button onClick={()=>{setSelIds(new Set(sorted.slice(0,4).map(i=>i.id)));setSelQty({});}} style={{background:"transparent",border:"1px solid #3A3835",borderRadius:8,padding:"5px 12px",color:YW,fontSize:12,fontFamily:"'Syne',sans-serif",cursor:"pointer"}}>⚡ 期限順で自動選択</button>
               </div>
               {sorted.map(it=>{
                 const s=selIds.has(it.id),d=daysTo(it.expiry),c=ec(d);
                 return (
                   <div key={it.id} onClick={()=>{const ns=new Set(selIds);ns.has(it.id)?ns.delete(it.id):ns.add(it.id);setSelIds(ns);}} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:s?CD:SF,borderRadius:12,marginBottom:8,border:"1px solid "+(s?A:"#2A2927"),cursor:"pointer",transition:"all .15s"}}>
                     <div style={{width:20,height:20,borderRadius:6,border:"2px solid "+(s?A:"#3A3835"),background:s?A:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontSize:12,color:"#fff",transition:"all .15s"}}>{s?"✓":""}</div>
-                    <p style={{flex:1,fontSize:14,fontFamily:"'Noto Sans JP',sans-serif"}}>{it.name}{it.qty>1&&<span style={{fontSize:12,color:MU,marginLeft:6}}>×{it.qty}</span>}</p>
+                    <p style={{flex:1,fontSize:14,fontFamily:"'Noto Sans JP',sans-serif"}}>{it.name}{it.qty>1&&<span style={{fontSize:12,color:MU,marginLeft:6}}>在庫×{it.qty}</span>}</p>
                     <span style={{fontSize:11,color:c,background:c+"22",padding:"2px 8px",borderRadius:20}}>{el(d)}</span>
                   </div>
                 );
