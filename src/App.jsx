@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 // Firebase
 const firebaseConfig = {
@@ -64,6 +64,7 @@ function LoginScreen() {
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [showSignup, setShowSignup] = useState(false);
 
   const doLogin = async () => {
     if (!email || !pass) { setErr("メールアドレスとパスワードを入力してください"); return; }
@@ -76,26 +77,160 @@ function LoginScreen() {
     } finally { setLoading(false); }
   };
 
+  const inputStyle = {width:"100%",background:SF,border:"1px solid #2E2D2B",borderRadius:12,padding:"14px 16px",color:TX,fontSize:16,outline:"none",WebkitAppearance:"none",fontFamily:"'Noto Sans JP',sans-serif"};
+
   return (
     <div style={{minHeight:"100vh",background:BG,display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 24px"}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Noto+Sans+JP:wght@300;400;500&display=swap');*{box-sizing:border-box;margin:0;padding:0;}::placeholder{color:#3A3835;}@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Noto+Sans+JP:wght@300;400;500&display=swap');*{box-sizing:border-box;margin:0;padding:0;}::placeholder{color:#3A3835;}@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes modalIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <div style={{width:"100%",maxWidth:360,animation:"fadeUp .5s ease",fontFamily:"'Syne',sans-serif",color:TX}}>
         <div style={{textAlign:"center",marginBottom:48}}>
           <div style={{fontSize:44,marginBottom:12}}>🍳</div>
           <h1 style={{fontSize:34,fontWeight:800,letterSpacing:-1.5}}><span style={{color:A}}>ひとり</span>めし</h1>
           <p style={{fontSize:11,color:MU,marginTop:8,letterSpacing:2,textTransform:"uppercase"}}>1人分レシピ &amp; 冷蔵庫管理</p>
         </div>
-        {[{label:"メールアドレス",val:email,set:setEmail,type:"email",ph:"example@mail.com",mode:"email"},{label:"パスワード",val:pass,set:setPass,type:"password",ph:"••••••••"}].map(f => (
-          <div key={f.label} style={{marginBottom:14}}>
-            <label style={{display:"block",fontSize:11,color:MU,letterSpacing:1,textTransform:"uppercase",marginBottom:7}}>{f.label}</label>
-            <input type={f.type} value={f.val} onChange={e=>f.set(e.target.value)} onKeyDown={e=>e.key==="Enter"&&(f.type==="email"?document.getElementById("inp-pass")?.focus():doLogin())} id={f.type==="password"?"inp-pass":undefined} placeholder={f.ph} inputMode={f.mode} autoComplete={f.type==="email"?"email":"current-password"}
-              style={{width:"100%",background:SF,border:"1px solid #2E2D2B",borderRadius:12,padding:"14px 16px",color:TX,fontSize:16,outline:"none",WebkitAppearance:"none",fontFamily:"'Noto Sans JP',sans-serif"}}/>
-          </div>
-        ))}
-        <button onClick={doLogin} disabled={loading} style={{width:"100%",padding:16,background:loading?"#2A2927":A,color:loading?MU:"#fff",border:"none",borderRadius:12,fontSize:15,fontWeight:700,fontFamily:"'Syne',sans-serif",cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:24}}>
-          {loading ? <><span style={{width:16,height:16,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>ログイン中…</> : "ログイン"}
+
+        <div style={{marginBottom:14}}>
+          <label htmlFor="login-email" style={{display:"block",fontSize:11,color:MU,letterSpacing:1,textTransform:"uppercase",marginBottom:7}}>メールアドレス</label>
+          <input id="login-email" type="email" value={email} onChange={e=>setEmail(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&document.getElementById("login-pass")?.focus()}
+            placeholder="example@mail.com" inputMode="email" autoComplete="email" style={inputStyle}/>
+        </div>
+        <div style={{marginBottom:14}}>
+          <label htmlFor="login-pass" style={{display:"block",fontSize:11,color:MU,letterSpacing:1,textTransform:"uppercase",marginBottom:7}}>パスワード</label>
+          <input id="login-pass" type="password" value={pass} onChange={e=>setPass(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&doLogin()}
+            placeholder="••••••••" autoComplete="current-password" style={inputStyle}/>
+        </div>
+
+        <button onClick={doLogin} disabled={loading} aria-busy={loading}
+          style={{width:"100%",padding:16,background:loading?"#2A2927":A,color:loading?MU:"#fff",border:"none",borderRadius:12,fontSize:15,fontWeight:700,fontFamily:"'Syne',sans-serif",cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:24}}>
+          {loading?<><span style={{width:16,height:16,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>ログイン中…</>:"ログイン"}
         </button>
-        {err && <div style={{background:"rgba(255,85,85,.1)",border:"1px solid rgba(255,85,85,.3)",borderRadius:10,padding:"12px 14px",fontSize:13,color:RD,fontFamily:"'Noto Sans JP',sans-serif",marginTop:14,lineHeight:1.5}}>{err}</div>}
+
+        {err && <div role="alert" style={{background:"rgba(255,85,85,.1)",border:"1px solid rgba(255,85,85,.3)",borderRadius:10,padding:"12px 14px",fontSize:13,color:RD,fontFamily:"'Noto Sans JP',sans-serif",marginTop:14,lineHeight:1.5}}>{err}</div>}
+
+        <div style={{textAlign:"center",marginTop:24}}>
+          <button onClick={()=>setShowSignup(true)}
+            style={{background:"transparent",border:"none",color:MU,fontSize:13,fontFamily:"'Noto Sans JP',sans-serif",cursor:"pointer",textDecoration:"underline"}}>
+            アカウントをお持ちでない方はこちら
+          </button>
+        </div>
+      </div>
+
+      {showSignup && <SignupModal onClose={()=>setShowSignup(false)}/>}
+    </div>
+  );
+}
+
+// ---- Signup Modal ----
+function SignupModal({ onClose }) {
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [passConfirm, setPassConfirm] = useState("");
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const validate = () => {
+    const e = {};
+    if (!email) e.email = "メールアドレスを入力してください";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "正しいメールアドレスの形式で入力してください";
+    if (!pass) e.pass = "パスワードを入力してください";
+    else if (pass.length < 6) e.pass = "パスワードは6文字以上にしてください";
+    else if (!/[A-Z]/.test(pass)) e.pass = "大文字を1文字以上含めてください";
+    else if (!/[0-9]/.test(pass)) e.pass = "数字を1文字以上含めてください";
+    if (!passConfirm) e.passConfirm = "パスワード（確認）を入力してください";
+    else if (pass !== passConfirm) e.passConfirm = "パスワードが一致しません";
+    return e;
+  };
+
+  const doSignup = async () => {
+    const e = validate();
+    setErrors(e);
+    if (Object.keys(e).length > 0) return;
+    setLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, pass);
+      setSuccess(true);
+    } catch(err) {
+      const m = {
+        "auth/email-already-in-use":"このメールアドレスはすでに登録されています",
+        "auth/invalid-email":"正しいメールアドレスの形式で入力してください",
+        "auth/weak-password":"パスワードが弱すぎます",
+        "auth/network-request-failed":"ネットワークエラーです"
+      };
+      setErrors({general: m[err.code] || "登録に失敗しました ("+err.code+")"});
+    } finally { setLoading(false); }
+  };
+
+  const inputStyle = (hasErr) => ({
+    width:"100%",background:"#1A1916",border:"1px solid "+(hasErr?"#FF5555":"#2E2D2B"),
+    borderRadius:12,padding:"14px 16px",color:"#F5F0E8",fontSize:15,outline:"none",
+    WebkitAppearance:"none",fontFamily:"'Noto Sans JP',sans-serif",marginTop:6
+  });
+
+  const errStyle = {fontSize:12,color:RD,marginTop:4,fontFamily:"'Noto Sans JP',sans-serif",lineHeight:1.5};
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="新規ユーザー登録"
+      onClick={e=>{if(e.target===e.currentTarget)onClose();}}
+      style={{position:"fixed",inset:0,zIndex:300,background:"rgba(0,0,0,.75)",display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0"}}>
+      <div style={{background:BG,borderRadius:"20px 20px 0 0",padding:"28px 24px 48px",width:"100%",maxWidth:480,border:"1px solid #2A2927",animation:"modalIn .3s ease",maxHeight:"90vh",overflowY:"auto"}}>
+
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+          <h2 style={{fontSize:18,fontWeight:800,letterSpacing:-.5}}>新規ユーザー登録</h2>
+          <button onClick={onClose} aria-label="閉じる"
+            style={{background:"none",border:"none",color:MU,fontSize:24,cursor:"pointer",lineHeight:1,padding:4}}>×</button>
+        </div>
+
+        {success ? (
+          <div style={{textAlign:"center",padding:"20px 0"}}>
+            <div style={{fontSize:48,marginBottom:16}}>🎉</div>
+            <p style={{fontSize:16,fontWeight:700,marginBottom:8}}>登録完了！</p>
+            <p style={{fontSize:14,color:MU,fontFamily:"'Noto Sans JP',sans-serif",lineHeight:1.7,marginBottom:24}}>アカウントが作成されました。<br/>このままアプリを使い始めてください！</p>
+            <button onClick={onClose}
+              style={{background:A,border:"none",borderRadius:12,padding:"13px 32px",color:"#fff",fontSize:14,fontWeight:700,fontFamily:"'Syne',sans-serif",cursor:"pointer"}}>
+              はじめる
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{marginBottom:16}}>
+              <label htmlFor="su-email" style={{fontSize:11,color:MU,letterSpacing:1,textTransform:"uppercase",display:"block"}}>メールアドレス <span style={{color:RD}}>*</span></label>
+              <input id="su-email" type="email" value={email} onChange={e=>{setEmail(e.target.value);setErrors(p=>({...p,email:""}));}}
+                placeholder="example@mail.com" inputMode="email" autoComplete="email" style={inputStyle(!!errors.email)} aria-describedby={errors.email?"su-email-err":undefined} aria-invalid={!!errors.email}/>
+              {errors.email && <p id="su-email-err" role="alert" style={errStyle}>⚠ {errors.email}</p>}
+            </div>
+
+            <div style={{marginBottom:16}}>
+              <label htmlFor="su-pass" style={{fontSize:11,color:MU,letterSpacing:1,textTransform:"uppercase",display:"block"}}>パスワード <span style={{color:RD}}>*</span></label>
+              <input id="su-pass" type="password" value={pass} onChange={e=>{setPass(e.target.value);setErrors(p=>({...p,pass:""}));}}
+                placeholder="例: Hello123" autoComplete="new-password" style={inputStyle(!!errors.pass)} aria-describedby="su-pass-hint su-pass-err" aria-invalid={!!errors.pass}/>
+              <p id="su-pass-hint" style={{fontSize:11,color:MU,marginTop:4,fontFamily:"'Noto Sans JP',sans-serif"}}>6文字以上・大文字1文字以上・数字1文字以上</p>
+              {errors.pass && <p id="su-pass-err" role="alert" style={errStyle}>⚠ {errors.pass}</p>}
+            </div>
+
+            <div style={{marginBottom:24}}>
+              <label htmlFor="su-pass2" style={{fontSize:11,color:MU,letterSpacing:1,textTransform:"uppercase",display:"block"}}>パスワード（確認） <span style={{color:RD}}>*</span></label>
+              <input id="su-pass2" type="password" value={passConfirm} onChange={e=>{setPassConfirm(e.target.value);setErrors(p=>({...p,passConfirm:""}));}}
+                onKeyDown={e=>e.key==="Enter"&&doSignup()}
+                placeholder="もう一度入力" autoComplete="new-password" style={inputStyle(!!errors.passConfirm)} aria-describedby={errors.passConfirm?"su-pass2-err":undefined} aria-invalid={!!errors.passConfirm}/>
+              {errors.passConfirm && <p id="su-pass2-err" role="alert" style={errStyle}>⚠ {errors.passConfirm}</p>}
+            </div>
+
+            {errors.general && <div role="alert" style={{background:"rgba(255,85,85,.1)",border:"1px solid rgba(255,85,85,.3)",borderRadius:10,padding:"12px 14px",fontSize:13,color:RD,fontFamily:"'Noto Sans JP',sans-serif",marginBottom:16,lineHeight:1.5}}>⚠ {errors.general}</div>}
+
+            <button onClick={doSignup} disabled={loading} aria-busy={loading}
+              style={{width:"100%",padding:16,background:loading?"#2A2927":A,color:loading?MU:"#fff",border:"none",borderRadius:12,fontSize:15,fontWeight:700,fontFamily:"'Syne',sans-serif",cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
+              {loading?<><span style={{width:16,height:16,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>登録中…</>:"アカウントを作成"}
+            </button>
+
+            <button onClick={onClose}
+              style={{width:"100%",padding:13,background:"transparent",border:"none",color:MU,fontSize:13,fontFamily:"'Noto Sans JP',sans-serif",cursor:"pointer",marginTop:12}}>
+              キャンセル
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -151,7 +286,27 @@ function MainApp() {
     let idx=0;
     const tk = setInterval(()=>{ if(idx<steps.length){setP(steps[idx].p,steps[idx].l);idx++;} },1000);
     try {
-      const b64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result.split(",")[1]); r.onerror=rej; r.readAsDataURL(file); });
+      // Compress image before sending
+      const b64 = await new Promise((res, rej) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX = 1200;
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          const data = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+          URL.revokeObjectURL(url);
+          res(data);
+        };
+        img.onerror = rej;
+        img.src = url;
+      });
       const today = new Date().toISOString().split("T")[0];
       const h = {"Content-Type":"application/json"};
       const res = await fetch("/api/chat",{method:"POST",headers:h,body:JSON.stringify({
