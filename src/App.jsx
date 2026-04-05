@@ -348,7 +348,7 @@ function MainApp({ user }) {
   const [shopChk, setShopChk] = useState(new Set());
   const fileRef = useRef();
 
-  const setFridge = v => { setFridgeState(v); sv("fridge",v); cloudSet(user.uid,"fridge",v); };
+  const setFridge = v => { const clean = (v||[]).filter(i=>i&&i.name&&i.expiry); setFridgeState(clean); sv("fridge",clean); cloudSet(user.uid,"fridge",clean); };
   const setSettings = v => { setSettingsState(v); sv("settings",v); cloudSet(user.uid,"settings",v); };
   const addToHistory = (recipes) => {
     const entry = { id: Date.now(), date: new Date().toLocaleDateString("ja-JP"), recipes };
@@ -365,7 +365,7 @@ function MainApp({ user }) {
       cloudGet(user.uid, "settings", DS),
       cloudGet(user.uid, "recipeHistory", [])
     ]).then(([f, s, h]) => {
-      if (f && f.length > 0) { setFridgeState(f); sv("fridge", f); }
+      if (f && f.length > 0) { const clean = f.filter(i=>i&&i.name&&i.expiry); setFridgeState(clean); sv("fridge", clean); }
       setSettingsState(prev => ({...DS, ...s}));
       if (h && h.length > 0) { setRecipeHistory(h); sv("recipeHistory", h); }
       setSyncing(false);
