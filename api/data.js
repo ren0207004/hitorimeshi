@@ -1,11 +1,3 @@
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
-  },
-};
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -23,8 +15,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = req.method === 'GET' ? req.query : (typeof req.body === 'string' ? JSON.parse(req.body) : req.body);
-    const { action, key, value } = body;
+    let action, key, value;
+
+    if (req.method === 'GET') {
+      action = req.query.action;
+      key = req.query.key;
+    } else {
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      action = body.action;
+      key = body.key;
+      value = body.value;
+    }
+
     const redisKey = `user:${uid}:${key}`;
 
     if (action === 'get') {
@@ -36,12 +38,16 @@ export default async function handler(req, res) {
     }
 
     if (action === 'set') {
-      await fetch(`${restUrl}/set/${encodeURIComponent(redisKey)}`, {
+      const response = await fetch(`${restUrl}/set/${encodeURIComponent(redisKey)}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${restToken}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${restToken}`,
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify([value])
       });
-      return res.status(200).json({ ok: true });
+      const data = await response.json();
+      return res.status(200).json({ ok: true, result: data.result });
     }
 
     return res.status(400).json({ error: 'Invalid action' });
