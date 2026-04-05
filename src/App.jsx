@@ -318,7 +318,7 @@ function SignupModal({ onClose }) {
 // ---- Main App ----
 function MainApp({ user }) {
   const [tab, setTab] = useState("fridge");
-  const [fridge, setFridgeState] = useState(() => ld("fridge",[]));
+  const [fridge, setFridgeState] = useState(() => (ld("fridge",[])||[]).filter(i=>i&&i.name&&i.expiry));
   const [settings, setSettingsState] = useState(() => ({...DS,...ld("settings",{})}));
   const [syncing, setSyncing] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -372,7 +372,7 @@ function MainApp({ user }) {
     }).catch(() => setSyncing(false));
   }, [user.uid]);
 
-  const sorted = [...fridge].sort((a,b) => new Date(a.expiry)-new Date(b.expiry));
+  const sorted = [...fridge].filter(i=>i&&i.expiry).sort((a,b) => new Date(a.expiry)-new Date(b.expiry));
 
   const addManual = () => {
     if (!mName.trim()) return;
