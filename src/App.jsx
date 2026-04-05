@@ -101,6 +101,26 @@ function xj(t) {
 function sv(k,v) { try { localStorage.setItem(k,JSON.stringify(v)); } catch(e) {} }
 function ld(k,d) { try { const v=localStorage.getItem(k); return v?JSON.parse(v):d; } catch(e) { return d; } }
 
+// Cloud sync helpers
+async function cloudGet(uid, key, def) {
+  try {
+    const res = await fetch(`/api/data?action=get&key=${key}`, {
+      headers: { Authorization: `Bearer ${uid}` }
+    });
+    const data = await res.json();
+    return data.value ? JSON.parse(data.value) : def;
+  } catch(e) { return def; }
+}
+async function cloudSet(uid, key, value) {
+  try {
+    await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${uid}` },
+      body: JSON.stringify({ action: 'set', key, value: JSON.stringify(value) })
+    });
+  } catch(e) {}
+}
+
 // ---- Segment Control ----
 function Seg({label, options, value, onChange}) {
   return (
@@ -296,10 +316,11 @@ function SignupModal({ onClose }) {
 }
 
 // ---- Main App ----
-function MainApp() {
+function MainApp({ user }) {
   const [tab, setTab] = useState("fridge");
   const [fridge, setFridgeState] = useState(() => ld("fridge",[]));
   const [settings, setSettingsState] = useState(() => ({...DS,...ld("settings",{})}));
+  const [syncing, setSyncing] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showReset, setShowReset] = useState(false);
@@ -323,8 +344,20 @@ function MainApp() {
   const [shopChk, setShopChk] = useState(new Set());
   const fileRef = useRef();
 
-  const setFridge = v => { setFridgeState(v); sv("fridge",v); };
-  const setSettings = v => { setSettingsState(v); sv("settings",v); };
+  const setFridge = v => { setFridgeState(v); sv("fridge",v); cloudSet(user.uid,"fridge",v); };
+  const setSettings = v => { setSettingsState(v); sv("settings",v); cloudSet(user.uid,"settings",v); };
+
+  // Load from cloud on mount
+  useEffect(() => {
+    Promise.all([
+      cloudGet(user.uid, "fridge", []),
+      cloudGet(user.uid, "settings", DS)
+    ]).then(([f, s]) => {
+      if (f && f.length > 0) { setFridgeState(f); sv("fridge", f); }
+      setSettingsState(prev => ({...DS, ...s}));
+      setSyncing(false);
+    }).catch(() => setSyncing(false));
+  }, [user.uid]);
 
   const sorted = [...fridge].sort((a,b) => new Date(a.expiry)-new Date(b.expiry));
 
@@ -451,6 +484,7 @@ usedQtyには使用する食材名と個数を必ず含めること。`;
         <div style={{display:"flex",alignItems:"baseline",gap:6}}>
           <span style={{fontSize:22,fontWeight:800,letterSpacing:-1,color:A}}>ひとり</span>
           <span style={{fontSize:22,fontWeight:800,letterSpacing:-1}}>めし</span>
+          {syncing && <span style={{fontSize:10,color:MU,marginLeft:4}}>同期中…</span>}
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
 
@@ -764,5 +798,5 @@ export default function App() {
   const [user, setUser] = useState(undefined);
   useEffect(() => { return onAuthStateChanged(auth, u => setUser(u)); }, []);
   if (user === undefined) return <div style={{minHeight:"100vh",background:"#0F0E0C",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{width:32,height:32,border:"3px solid #333",borderTopColor:"#FF6B35",borderRadius:"50%",display:"inline-block",animation:"spin .8s linear infinite"}}/><style>{"@keyframes spin{to{transform:rotate(360deg)}}"}</style></div>;
-  return user ? <MainApp/> : <LoginScreen/>;
+  return user ? <MainApp user={user}/> : <LoginScreen/>;
 }
