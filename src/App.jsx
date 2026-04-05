@@ -337,6 +337,10 @@ function MainApp({ user }) {
   const [mDate, setMDate] = useState(new Date().toISOString().split("T")[0]);
   const [selIds, setSelIds] = useState(new Set());
   const [selQty, setSelQty] = useState({});
+  const [recipeCount, setRecipeCount] = useState(1);
+  const [recipeHistory, setRecipeHistory] = useState(() => ld("recipeHistory",[]));
+  const [showHistory, setShowHistory] = useState(false);
+  const [pendingRecipe, setPendingRecipe] = useState(null); // {recipes, chosenIds, fridgeSnapshot}
   const [generating, setGenerating] = useState(false);
   const [recipe, setRecipe] = useState(null);
   const [recipeTab, setRecipeTab] = useState("作り方");
@@ -346,15 +350,24 @@ function MainApp({ user }) {
 
   const setFridge = v => { setFridgeState(v); sv("fridge",v); cloudSet(user.uid,"fridge",v); };
   const setSettings = v => { setSettingsState(v); sv("settings",v); cloudSet(user.uid,"settings",v); };
+  const addToHistory = (recipes) => {
+    const entry = { id: Date.now(), date: new Date().toLocaleDateString("ja-JP"), recipes };
+    const newHistory = [entry, ...recipeHistory].slice(0, 30);
+    setRecipeHistory(newHistory);
+    sv("recipeHistory", newHistory);
+    cloudSet(user.uid, "recipeHistory", newHistory);
+  };
 
   // Load from cloud on mount
   useEffect(() => {
     Promise.all([
       cloudGet(user.uid, "fridge", []),
-      cloudGet(user.uid, "settings", DS)
-    ]).then(([f, s]) => {
+      cloudGet(user.uid, "settings", DS),
+      cloudGet(user.uid, "recipeHistory", [])
+    ]).then(([f, s, h]) => {
       if (f && f.length > 0) { setFridgeState(f); sv("fridge", f); }
       setSettingsState(prev => ({...DS, ...s}));
+      if (h && h.length > 0) { setRecipeHistory(h); sv("recipeHistory", h); }
       setSyncing(false);
     }).catch(() => setSyncing(false));
   }, [user.uid]);
@@ -446,28 +459,23 @@ function MainApp({ user }) {
       const {maxTime,dishCount,spiceLevel,cookStyle,riceSize} = settings;
       const dn = dishCount==="少なめ"?"できるだけ少ない調理器具で":dishCount==="多くてもOK"?"洗い物は気にしない":"洗い物は普通程度で";
       const ingredientList = chosen.map(i=>`${i.name}(在庫${i.qty}個)`).join(", ");
-      const p = `食材: ${ingredientList}。1人分のレシピ1つ。条件: ${maxTime}分以内、${dn}、味は${spiceLevel}、ご飯の量は${riceSize}${cookStyle!=="何でも"?"、"+cookStyle+"を優先":""}。
+      const styleGuide = cookStyle==="何でも" ? "デフォルトは和食（煮物・炒め物・丼・汁物など）を優先。バリエーションとして洋食・中華も可" : cookStyle+"を優先";
+      const p = `食材: ${ingredientList}。1人分のレシピを${recipeCount}つ提案。条件: ${maxTime}分以内、${dn}、味は${spiceLevel}、ご飯の量は${riceSize}、${styleGuide}。
 ご飯の量(${riceSize})に合わせて各食材の適切な使用個数をAIが判断すること。在庫数を超えないこと。
-JSONのみ返答: {"name":"料理名","emoji":"🍳","time":"15分","difficulty":"簡単","description":"説明","calories":"400kcal","protein":"15g","carbs":"50g","fat":"10g","steps":["手順1","手順2","手順3"],"missing":[],"tip":"コツ","dishes":"使う調理器具","usedQty":{"食材名":使用個数}}
-usedQtyには使用する食材名と個数を必ず含めること。`;
+${recipeCount}つのレシピはそれぞれ異なる料理ジャンル・調理法にすること。
+JSONのみ返答（配列で返すこと）: [{"name":"料理名","emoji":"🍳","time":"15分","difficulty":"簡単","description":"説明","calories":"400kcal","protein":"15g","carbs":"50g","fat":"10g","steps":["手順1","手順2","手順3"],"missing":[],"tip":"コツ","dishes":"使う調理器具","usedQty":{"食材名":使用個数}}]`;
       const h = {"Content-Type":"application/json"};
       const res = await fetch("/api/chat",{method:"POST",headers:h,body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1000,system:"日本語でJSONのみで返答。マークダウン不要。",messages:[{role:"user",content:p}]})});
       if(!res.ok){const t=await res.text();setRecipeErr("APIエラー("+res.status+"): "+t.slice(0,80));return;}
       const data = await res.json();
-      const parsed = xj((data.content||[]).map(b=>b.text||"").join(""));
+      const rawText = (data.content||[]).map(b=>b.text||"").join("");
+      const parsed = xj(rawText);
       if(!parsed){setRecipeErr("パースエラー。もう一度試してください。");return;}
-      setRecipe(parsed); setRecipeTab("作り方"); setShopChk(new Set());
-      // Use AI-decided quantities, fall back to 1 if not specified
-      const aiUsedQty = parsed.usedQty || {};
-      setFridge(prev => {
-        return prev.map(item => {
-          if (!selIds.has(item.id)) return item;
-          const used = aiUsedQty[item.name] || 1;
-          const remaining = item.qty - used;
-          if (remaining <= 0) return null;
-          return {...item, qty: remaining};
-        }).filter(Boolean);
-      });
+      const recipes = Array.isArray(parsed) ? parsed : [parsed];
+      setRecipe(recipes[0]); setRecipeTab("作り方"); setShopChk(new Set());
+      // Save pending state - don't modify fridge yet, wait for user confirmation
+      setPendingRecipe({ recipes, chosenIds: new Set(selIds), fridgeSnapshot: [...fridge] });
+      addToHistory(recipes);
       setSelIds(new Set()); setSelQty({});
     } catch(e) { setRecipeErr("エラー: "+e.message); }
     finally { setGenerating(false); }
@@ -648,11 +656,23 @@ usedQtyには使用する食材名と個数を必ず含めること。`;
       {/* RECIPE */}
       {tab==="recipe" && (
         <div style={{padding:"18px 20px 0",animation:"fadeUp .3s ease"}}>
-          {/* Settings badges */}
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}} onClick={()=>setShowSettings(true)}>
-            {[`⏱ ${settings.maxTime}分`,`🍚 ${settings.riceSize}`,`🍽 ${settings.dishCount}`,`🧂 ${settings.spiceLevel}`,...(settings.cookStyle!=="何でも"?[`🔥 ${settings.cookStyle}`]:[])].map((b,i)=>(
-              <span key={i} style={{fontSize:11,color:BL,background:BL+"18",border:"1px solid "+BL+"33",padding:"4px 10px",borderRadius:20,cursor:"pointer"}}>{b}</span>
-            ))}
+          {/* Settings badges + recipe count + history */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}} onClick={()=>setShowSettings(true)}>
+              {[`⏱ ${settings.maxTime}分`,`🍚 ${settings.riceSize}`,`🍽 ${settings.dishCount}`,`🧂 ${settings.spiceLevel}`,...(settings.cookStyle!=="何でも"?[`🔥 ${settings.cookStyle}`]:[])].map((b,i)=>(
+                <span key={i} style={{fontSize:11,color:BL,background:BL+"18",border:"1px solid "+BL+"33",padding:"4px 10px",borderRadius:20,cursor:"pointer"}}>{b}</span>
+              ))}
+            </div>
+            <button onClick={()=>setShowHistory(true)} style={{background:"transparent",border:"1px solid #3A3835",borderRadius:8,padding:"5px 10px",color:MU,fontSize:11,fontFamily:"'Syne',sans-serif",cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>📋 履歴</button>
+          </div>
+          {/* Recipe count selector */}
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:SF,borderRadius:10,padding:"10px 14px"}}>
+            <span style={{fontSize:12,color:MU,fontFamily:"'Noto Sans JP',sans-serif"}}>レシピ提案数</span>
+            <div style={{display:"flex",gap:4,marginLeft:"auto"}}>
+              {[1,2,3].map(n=>(
+                <button key={n} onClick={()=>setRecipeCount(n)} style={{width:32,height:32,borderRadius:8,border:"none",background:recipeCount===n?A:CD,color:recipeCount===n?"#fff":MU,fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>{n}</button>
+              ))}
+            </div>
           </div>
 
           {fridge.length===0 ? (
@@ -748,6 +768,77 @@ usedQtyには使用する食材名と個数を必ず含めること。`;
               </div>
             </div>
           )}
+        {/* Cook confirm buttons */}
+        {pendingRecipe && recipe && (
+          <div style={{padding:"0 20px",marginTop:8}}>
+            {pendingRecipe.recipes.length > 1 && (
+              <div style={{background:SF,borderRadius:12,padding:"12px 14px",border:"1px solid #2A2927",marginBottom:8}}>
+                <p style={{fontSize:11,color:MU,marginBottom:10,fontFamily:"'Noto Sans JP',sans-serif"}}>他のレシピ候補</p>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                  {pendingRecipe.recipes.map((r,i)=>(
+                    <button key={i} onClick={()=>{setRecipe(r);setRecipeTab("作り方");setShopChk(new Set());}}
+                      style={{padding:"6px 14px",background:recipe===r?A:CD,border:"1px solid "+(recipe===r?A:"#3A3835"),borderRadius:20,color:recipe===r?"#fff":TX,fontSize:12,cursor:"pointer",fontFamily:"'Noto Sans JP',sans-serif"}}>
+                      {r.emoji} {r.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{display:"flex",gap:8,paddingBottom:20}}>
+              <button onClick={()=>{
+                const aiUsedQty = recipe.usedQty || {};
+                setFridge(prev=>prev.map(item=>{
+                  if(!pendingRecipe.chosenIds.has(item.id))return item;
+                  const used=aiUsedQty[item.name]||1;
+                  const remaining=item.qty-used;
+                  if(remaining<=0)return null;
+                  return {...item,qty:remaining};
+                }).filter(Boolean));
+                setPendingRecipe(null);
+              }} style={{flex:1,padding:"13px",background:GN,border:"none",borderRadius:12,color:"#fff",fontSize:14,fontWeight:700,fontFamily:"'Syne',sans-serif",cursor:"pointer"}}>
+                ✅ 作った！
+              </button>
+              <button onClick={()=>{
+                setFridge(pendingRecipe.fridgeSnapshot);
+                setPendingRecipe(null);
+                setRecipe(null);
+              }} style={{flex:1,padding:"13px",background:CD,border:"1px solid #3A3835",borderRadius:12,color:MU,fontSize:14,fontWeight:700,fontFamily:"'Syne',sans-serif",cursor:"pointer"}}>
+                ✕ やめた
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      )}
+
+      {/* History Modal */}
+      {showHistory && (
+        <div onClick={()=>setShowHistory(false)} style={{position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,.7)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:BG,borderRadius:"20px 20px 0 0",padding:"24px 20px 40px",width:"100%",maxWidth:480,border:"1px solid #2A2927",animation:"fadeUp .25s ease",maxHeight:"80vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+              <span style={{fontSize:15,fontWeight:700}}>📋 レシピ履歴</span>
+              <button onClick={()=>setShowHistory(false)} style={{background:"none",border:"none",color:MU,fontSize:22,cursor:"pointer"}}>×</button>
+            </div>
+            {recipeHistory.length===0?(
+              <div style={{textAlign:"center",padding:"30px 0",opacity:.4}}>
+                <p style={{fontSize:32,marginBottom:8}}>🍽</p>
+                <p style={{color:MU,fontSize:13,fontFamily:"'Noto Sans JP',sans-serif"}}>まだレシピ履歴がありません</p>
+              </div>
+            ):recipeHistory.map((entry,ei)=>(
+              <div key={entry.id} style={{marginBottom:16}}>
+                <p style={{fontSize:11,color:MU,marginBottom:8,letterSpacing:1}}>{entry.date}</p>
+                {entry.recipes.map((r,ri)=>(
+                  <div key={ri} style={{background:SF,borderRadius:12,padding:"12px 14px",marginBottom:6,border:"1px solid #2A2927",display:"flex",alignItems:"center",gap:12}}>
+                    <span style={{fontSize:24}}>{r.emoji}</span>
+                    <div style={{flex:1}}>
+                      <p style={{fontSize:14,fontWeight:700}}>{r.name}</p>
+                      <p style={{fontSize:11,color:MU,marginTop:2,fontFamily:"'Noto Sans JP',sans-serif"}}>{r.time} / {r.difficulty} / {r.calories}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
